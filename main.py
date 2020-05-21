@@ -2,6 +2,8 @@ import asyncio
 import json
 import re
 import traceback
+import sys
+import os
 from subprocess import PIPE
 
 import aiohttp
@@ -15,6 +17,15 @@ import tio
 bot = commands.Bot(command_prefix="tiop!", help_command=commands.DefaultHelpCommand(width=100))
 bot.load_extension("jishaku")
 
+
+@bot.event
+async def on_ready():
+    print(f"Ready on {bot.user}")
+    if os.path.exists("close_channel"):
+        with open("close_channel") as f:
+            close_channel = int(f.read())
+        os.remove("close_channel")
+        await bot.get_channel(close_channel).send("ただいま！")
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -42,7 +53,11 @@ async def update(ctx):
         embed.add_field(name="Error output", value=f"```\n{stderr.decode('utf-8')}\n```", inline=False)
     embed.title = "`git pull` completed" + " with errors" * bool(code)
     await msg.edit(embed=embed)
-    sys.exit(0)
+    await ctx.send("すみません, shutting down...")
+    with open("close_channel", "w") as f:
+        f.write(str(ctx.channel.id))
+    await bot.session.close()
+    await bot.close()
 
 
 def save_json():
