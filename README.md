@@ -10,10 +10,10 @@ A Discord bot for accessing the [Try It Online](https://tio.run/) API through co
 There are two ways to execute code. Explicit execution involves pinging the bot and sending a code block with language or an attachment:
 ```
 @TIO.py
-\`\`\`py
+``py
 # the code block language is used to tell which language to execute
 print("hi")
-\`\`\`
+``
 ```
 Implicit execution is the same, but without the ping. It has no attachment support, and will ignore errors. If it annoys you, you can opt out of implicit execution with `tio!opt implicit off`.
 
