@@ -40,12 +40,11 @@ async def request(session, lang, code, input_=None):
         t = await resp.text()
         d = list(filter(bool, t.split(t[:16])))
         if len(d) == 1:
-            return "", d[0]
+            return "", *d, ""
         elif len(d) == 2:
-            return d[0], d[1]
+            return *d, ""
         else:
-            print(f"abnormal data: {d}")
-            return "", ""
+            return tuple(d)
 
 async def get_languages(session):
     async with session.get("https://tio.run/languages.json") as resp:

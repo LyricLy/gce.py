@@ -4,6 +4,7 @@ import re
 import traceback
 import sys
 import os
+import io
 from subprocess import PIPE
 
 import aiohttp
@@ -14,7 +15,7 @@ from fuzzywuzzy import process
 import tio
 
 
-bot = commands.Bot(command_prefix="tiop!", help_command=commands.DefaultHelpCommand(width=100))
+bot = commands.Bot(command_prefix="tio!", help_command=commands.DefaultHelpCommand(width=100))
 bot.load_extension("jishaku")
 
 
@@ -40,6 +41,7 @@ async def on_command_error(ctx, error):
         traceback.print_exception(type(error), error, error.__traceback__)
 
 @bot.command()
+@commands.is_owner()
 async def update(ctx):
     embed = discord.Embed(title="Running `git pull`", colour=0x7289DA)
     msg = await ctx.send(embed=embed)
@@ -111,6 +113,7 @@ def match_lang(term, score, limit):
 
 @bot.command()
 async def langs(ctx, *, search=None):
+    """Find usable languages."""
     langs = bot.langs
     if search:
         langs = match_lang(search, 88, 20)
@@ -164,9 +167,15 @@ async def on_message(message):
         match = re.search(CODEBLOCK_REGEX, message.content)
         if not match:
             if explicit:
-                # TODO: attachments
-                await message.channel.send("I didn't find a code block in your message.")
-            return
+                if message.attachments:
+                    try:
+                        code = (await message.attachments[0].read()).decode()
+                    except UnicodeDecodeError:
+                        return await message.channel.send("That file isn't valid UTF-8.")
+                else:
+                    return await message.channel.send("I didn't find a code block or attachment in or on your message.")
+            else:
+                return
         else:
             lang, code = match.group(1), match.group(2)
 
@@ -184,23 +193,28 @@ async def on_message(message):
             await msg.add_reaction("❌")
             done, pending = await asyncio.wait([
                 bot.wait_for("message", check=lambda m: m.author == message.author),
-                bot.wait_for("reaction_add", check=lambda r, u: u == message.author and str(r.emoji) == "❌")
+                bot.wait_for("reaction_add", check=lambda r, u: u == message.author and r.message.id == msg.id and str(r.emoji) == "❌")
             ], return_when=asyncio.FIRST_COMPLETED); [*map(asyncio.Future.cancel, pending)]
             obj = done.pop().result()
             if isinstance(obj, discord.Message):
                 input_ = obj.content
 
-        output, debug = await tio.request(bot.session, lang, code, input_)
+        output, debug, info = await tio.request(bot.session, lang, code, input_)
 
         if len(output) < 2000:
             if output:
                 await message.channel.send(output)
         elif explicit:
-            # TODO: send as attachment
-            await message.channel.send("Output is too large.")
+            msg = await message.channel.send("Output is too large. Would you like it as a file?")
+            await msg.add_reaction("📎")
+            await msg.add_reaction("❌")
+            reaction, _ = await bot.wait_for("reaction_add", check=lambda r, u: u == message.author and r.message.id == msg.id and str(r.emoji) in ["📎", "❌"])
+            if reaction.emoji == "📎":
+                await message.channel.send(file=discord.File(io.BytesIO(output.encode()), filename="output.txt"))
+            await msg.delete()
 
-        if debug[-1] != "0" and explicit:
-            await message.channel.send(embed=discord.Embed(title="Debug", description="".join(debug.splitlines(True)[:-4])[:2000]))
+        if info or debug[-1] != "0" and explicit:
+            await message.channel.send(embed=discord.Embed(title="Debug", description="".join(debug.splitlines(True)[:-4])[:2000]).add_field(name="Info", value=info))
 
 
 async def setup():
