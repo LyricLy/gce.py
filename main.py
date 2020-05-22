@@ -217,7 +217,7 @@ async def on_message(message):
             e = discord.Embed(title="Debug", description="".join(debug.splitlines(True)[:-4])[:2000])
             if info:
                 e.add_field(name="Info", value=info)
-            await ctx.send(embed=e)
+            await message.channel.send(embed=e)
 
 
 async def setup():
