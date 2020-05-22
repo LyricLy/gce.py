@@ -204,6 +204,8 @@ async def on_message(message):
         if len(output) < 2000:
             if output:
                 await message.channel.send(output)
+            elif explicit:
+                await message.channel.send("(no output)")
         elif explicit:
             msg = await message.channel.send("Output is too large. Would you like it as a file?")
             await msg.add_reaction("📎")
