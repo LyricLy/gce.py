@@ -214,7 +214,10 @@ async def on_message(message):
             await msg.delete()
 
         if info or debug[-1] != "0" and explicit:
-            await message.channel.send(embed=discord.Embed(title="Debug", description="".join(debug.splitlines(True)[:-4])[:2000]).add_field(name="Info", value=info))
+            e = discord.Embed(title="Debug", description="".join(debug.splitlines(True)[:-4])[:2000])
+            if info:
+                e.add_field(name="Info", value=info)
+            await ctx.send(embed=e)
 
 
 async def setup():
