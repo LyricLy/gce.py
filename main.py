@@ -198,6 +198,7 @@ async def on_message(message):
             obj = done.pop().result()
             if isinstance(obj, discord.Message):
                 input_ = obj.content
+            await msg.delete()
 
         output, debug, info = await tio.request(bot.session, lang, code, input_)
 
