@@ -216,7 +216,7 @@ async def on_message(message):
                 await message.channel.send(file=discord.File(io.BytesIO(output.encode()), filename="output.txt"))
             await msg.delete()
 
-        if info or debug[-1] != "0" and explicit:
+        if explicit and (info or debug[-1] != "0"):
             e = discord.Embed(title="Debug", description="".join(debug.splitlines(True)[:-4])[:2000])
             if info:
                 e.add_field(name="Info", value=info)
