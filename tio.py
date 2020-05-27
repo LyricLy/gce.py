@@ -24,7 +24,7 @@ class Request:
         for name, value in self.variables:
             output += f"V{name}\x00{len(value.split(' '))}\x00{value}\x00".encode()
         for name, content in self.files:
-            output += f"F{name}\x00{len(content)}\x00{content}\x00".encode()
+            output += f"F{name}\x00{len(content.encode())}\x00{content}\x00".encode()
         output += b"R"
         return zlib.compress(output, 9)[2:-4]
 
