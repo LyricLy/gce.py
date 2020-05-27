@@ -135,7 +135,7 @@ async def langs(ctx, *, search=None):
         await ctx.send("No matches found.")
 
 
-CODEBLOCK_REGEX = re.compile(r"```(\w+)\n(.*?)```", re.DOTALL)
+CODEBLOCK_REGEX = re.compile(r"```([a-zA-Z_-+.]+)\n(.*?)```", re.DOTALL)
 
 aliases = {
     "bf": "brainfuck",
