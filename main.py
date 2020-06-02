@@ -186,7 +186,7 @@ async def execute_code(message, lang, code, explicit):
     bot.results[message.author] = (lang, code, debug, info)
 
     if len(output) < 2000:
-        if output:
+        if output.strip():
             await message.channel.send(output.decode())
         elif explicit:
             await message.channel.send("(no output)")
