@@ -3,6 +3,7 @@ import json
 import re
 import traceback
 import sys
+import socket
 import os
 import io
 from subprocess import PIPE
@@ -135,7 +136,10 @@ async def langs(ctx, *, search=None):
         await ctx.send("No matches found.")
 
 
-CODEBLOCK_REGEX = re.compile(r"```([a-zA-Z_\-+.]+)\n(.*?)```", re.DOTALL)
+LANG = r"([a-zA-Z_\-+.]+)"
+CODEBLOCK = re.compile(rf"```{LANG}\n(.*?)```", re.DOTALL)
+
+bot.results = {}
 
 aliases = {
     "bf": "brainfuck",
@@ -155,6 +159,66 @@ aliases = {
     "k": "k-kona"
 }
 
+async def send_debug(channel, debug, info):
+    e = discord.Embed(title="Debug", description="".join(debug.splitlines(True)[:-4])[:2000])
+    if info:
+        e.add_field(name="Info", value=info)
+    await channel.send(embed=e)
+
+async def execute_code(message, lang, code, explicit):
+    input_ = ""
+    if explicit:
+        msg = await message.channel.send("Enter some input for the program to take, or click the X to run with no input.")
+        await msg.add_reaction("❌")
+        done, pending = await asyncio.wait([
+            bot.wait_for("message", check=lambda m: m.author == message.author),
+            bot.wait_for("reaction_add", check=lambda r, u: u == message.author and r.message.id == msg.id and str(r.emoji) == "❌")
+        ], return_when=asyncio.FIRST_COMPLETED)
+        obj = done.pop().result()
+        if isinstance(obj, discord.Message):
+            if obj.attachments:
+                input_ = await obj.attachments[0].read()
+            else:
+                input_ = obj.content
+        await msg.delete()
+
+    output, debug, info = await tio.request(bot.session, lang, code, input_)
+    bot.results[message.author] = (lang, code, debug, info)
+
+    if len(output) < 2000:
+        if output:
+            await message.channel.send(output.decode())
+        elif explicit:
+            await message.channel.send("(no output)")
+    elif explicit:
+        msg = await message.channel.send(f"Output is too large. Would you like it as a link?")
+        await msg.add_reaction("📎")
+        await msg.add_reaction("❌")
+        reaction, _ = await bot.wait_for("reaction_add", check=lambda r, u: u == message.author and r.message.id == msg.id and str(r.emoji) in ["📎", "❌"])
+        if reaction.emoji == "📎":
+            async with bot.session.post("https://mystb.in/documents", data=output) as resp:
+                key = (await resp.json())["key"]
+            await message.channel.send(f"<https://mystb.in/{key}.txt>")
+        await msg.delete()
+    if explicit and (info or not debug.endswith(b"0")):
+        await send_debug(message.channel, debug.decode(), info.decode())
+
+@bot.command(aliases=["do-over", "replicate", "redo", "again"])
+async def repeat(ctx):
+    """Repeat the last TIO invokation you performed in explicit mode, allowing you to give new input."""
+    if ctx.author not in bot.results:
+        return await ctx.send("You haven't used TIO.py recently.")
+    lang, code, *_ = bot.results[ctx.author]
+    await execute_code(ctx.message, lang, code, True)
+
+@bot.command(aliases=["error", "err"])
+async def debug(ctx):
+    """Post the debug embed of the last TIO invokation you performed."""
+    if ctx.author not in bot.results:
+        return await ctx.send("You haven't used TIO.py recently.")
+    _, _, debug, info = bot.results[ctx.author]
+    await send_debug(ctx.channel, debug.decode(), info.decode())
+
 @bot.event
 async def on_message(message):
     await bot.process_commands(message)
@@ -164,14 +228,16 @@ async def on_message(message):
 
     explicit = bot.user in message.mentions
     if explicit or get_options(message.author, "implicit"):
-        match = re.search(CODEBLOCK_REGEX, message.content)
+        match = re.search(CODEBLOCK, message.content)
         if not match:
             if explicit:
                 if message.attachments:
-                    try:
-                        code = (await message.attachments[0].read()).decode()
-                    except UnicodeDecodeError:
-                        return await message.channel.send("That file isn't valid UTF-8.")
+                    code = await message.attachments[0].read()
+                    lang_match = re.match(rf"<@!?{bot.user.id}>\s*{LANG}", message.content)
+                    if lang_match:
+                        lang = lang_match.group(1)
+                    else:
+                        return await message.channel.send("Please send a language in your message to use an attachment.")
                 else:
                     return await message.channel.send("I didn't find a code block or attachment in or on your message.")
             else:
@@ -179,7 +245,7 @@ async def on_message(message):
         else:
             lang, code = match.group(1), match.group(2)
 
-        lang = aliases.get(lang, lang)
+        lang = aliases.get(lang.lower(), lang.lower())
         if lang not in bot.langs and explicit:
             o = f"`{lang}` is not a supported language."
             matches = list(match_lang(lang, 88, 8))
@@ -187,44 +253,11 @@ async def on_message(message):
                 o += f" Did you mean one of: {', '.join(matches)}"
             return await message.channel.send(o)
 
-        input_ = ""
-        if explicit:
-            msg = await message.channel.send("Enter some input for the program to take, or click the X to run with no input.")
-            await msg.add_reaction("❌")
-            done, pending = await asyncio.wait([
-                bot.wait_for("message", check=lambda m: m.author == message.author),
-                bot.wait_for("reaction_add", check=lambda r, u: u == message.author and r.message.id == msg.id and str(r.emoji) == "❌")
-            ], return_when=asyncio.FIRST_COMPLETED); [*map(asyncio.Future.cancel, pending)]
-            obj = done.pop().result()
-            if isinstance(obj, discord.Message):
-                input_ = obj.content
-            await msg.delete()
-
-        output, debug, info = await tio.request(bot.session, lang, code, input_)
-
-        if len(output) < 2000:
-            if output:
-                await message.channel.send(output)
-            elif explicit:
-                await message.channel.send("(no output)")
-        elif explicit:
-            msg = await message.channel.send("Output is too large. Would you like it as a file?")
-            await msg.add_reaction("📎")
-            await msg.add_reaction("❌")
-            reaction, _ = await bot.wait_for("reaction_add", check=lambda r, u: u == message.author and r.message.id == msg.id and str(r.emoji) in ["📎", "❌"])
-            if reaction.emoji == "📎":
-                await message.channel.send(file=discord.File(io.BytesIO(output.encode()), filename="output.txt"))
-            await msg.delete()
-
-        if explicit and (info or debug[-1] != "0"):
-            e = discord.Embed(title="Debug", description="".join(debug.splitlines(True)[:-4])[:2000])
-            if info:
-                e.add_field(name="Info", value=info)
-            await message.channel.send(embed=e)
+        await execute_code(message, lang, code, explicit)
 
 
 async def setup():
-    bot.session = aiohttp.ClientSession()
+    bot.session = aiohttp.ClientSession(connector=aiohttp.TCPConnector(family=socket.AF_INET))
     bot.langs = await tio.get_languages(bot.session)
 
 bot.loop.run_until_complete(setup())
