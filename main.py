@@ -14,6 +14,7 @@ from discord.ext import commands
 from fuzzywuzzy import process
 
 import tio
+import custom
 
 
 bot = commands.Bot(command_prefix="tio!", help_command=commands.DefaultHelpCommand(width=100))
@@ -56,7 +57,7 @@ async def update(ctx):
         embed.add_field(name="Error output", value=f"```\n{stderr.decode('utf-8')}\n```", inline=False)
     embed.title = "`git pull` completed" + " with errors" * bool(code)
     await msg.edit(embed=embed)
-    await ctx.send("すみません, shutting down...")
+    await ctx.send("Shutting down...")
     with open("close_channel", "w") as f:
         f.write(str(ctx.channel.id))
     await bot.session.close()
@@ -110,14 +111,15 @@ for key, (converter, default, desc) in valid_opts.items():
 
 
 def match_lang(term, score, limit):
-    return map(lambda x: x[0], process.extractBests(term, bot.langs, processor=lambda s: s.split("-", 1)[0], score_cutoff=score, limit=limit))
+    return map(lambda x: x[0], process.extractBests(term, bot.langs + custom.languages, processor=lambda s: s.split("-", 1)[0], score_cutoff=score, limit=limit))
 
 @bot.command()
 async def langs(ctx, *, search=None):
     """Find usable languages."""
-    langs = bot.langs
     if search:
         langs = match_lang(search, 88, 20)
+    else:
+        langs = list(set(bot.langs) | set(custom.languages))
 
     output = []
     length = -1
@@ -136,7 +138,7 @@ async def langs(ctx, *, search=None):
         await ctx.send("No matches found.")
 
 
-LANG = r"([a-zA-Z_\-+.]+)"
+LANG = r"([a-zA-Z_\-+.0-9]+)"
 CODEBLOCK = re.compile(rf"```{LANG}\n(.*?)```", re.DOTALL)
 
 bot.results = {}
@@ -170,10 +172,10 @@ async def execute_code(message, lang, code, explicit):
     if explicit:
         msg = await message.channel.send("Enter some input for the program to take, or click the X to run with no input.")
         await msg.add_reaction("❌")
-        done, pending = await asyncio.wait([
+        done, pending = await asyncio.wait(map(asyncio.create_task, [
             bot.wait_for("message", check=lambda m: m.author == message.author),
             bot.wait_for("reaction_add", check=lambda r, u: u == message.author and r.message.id == msg.id and str(r.emoji) == "❌")
-        ], return_when=asyncio.FIRST_COMPLETED)
+        ]), return_when=asyncio.FIRST_COMPLETED)
         obj = done.pop().result()
         if isinstance(obj, discord.Message):
             if obj.attachments:
@@ -182,7 +184,10 @@ async def execute_code(message, lang, code, explicit):
                 input_ = obj.content
         await msg.delete()
 
-    output, debug, info = await tio.request(bot.session, lang, code, input_)
+    if lang in custom.languages:
+        output, debug, info = await custom.execute(lang, code, input_)
+    else:
+        output, debug, info = await tio.request(bot.session, lang, code, input_)
     bot.results[message.author] = (lang, code, debug, info)
 
     if len(output) < 2000:
@@ -246,14 +251,15 @@ async def on_message(message):
             lang, code = match.group(1), match.group(2)
 
         lang = aliases.get(lang.lower(), lang.lower())
-        if lang not in bot.langs and explicit:
+
+        if lang in custom.languages or lang in bot.langs:
+            await execute_code(message, lang, code, explicit)
+        elif explicit:
             o = f"`{lang}` is not a supported language."
             matches = list(match_lang(lang, 88, 8))
             if matches:
                 o += f" Did you mean one of: {', '.join(matches)}"
             return await message.channel.send(o)
-
-        await execute_code(message, lang, code, explicit)
 
 
 async def setup():
