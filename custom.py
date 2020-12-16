@@ -5,7 +5,7 @@ import time
 
 languages = {
     "brainfuck": "tritium -b -z .code",
-    "letra": "cd /home/lyricly/aoccy && python ../letra.py .code",
+    "letra": "python ../letra.py .code",
 }
 
 async def execute(lang, code, input_):
