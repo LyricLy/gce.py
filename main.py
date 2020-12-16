@@ -172,10 +172,10 @@ async def execute_code(message, lang, code, explicit):
     if explicit:
         msg = await message.channel.send("Enter some input for the program to take, or click the X to run with no input.")
         await msg.add_reaction("❌")
-        done, pending = await asyncio.wait(map(asyncio.create_task, [
-            bot.wait_for("message", check=lambda m: m.author == message.author),
-            bot.wait_for("reaction_add", check=lambda r, u: u == message.author and r.message.id == msg.id and str(r.emoji) == "❌")
-        ]), return_when=asyncio.FIRST_COMPLETED)
+        done, pending = await asyncio.wait([
+            asyncio.create_task(bot.wait_for("message", check=lambda m: m.author == message.author)),
+            asyncio.create_task(bot.wait_for("reaction_add", check=lambda r, u: u == message.author and r.message.id == msg.id and str(r.emoji) == "❌")),
+        ], return_when=asyncio.FIRST_COMPLETED)
         obj = done.pop().result()
         if isinstance(obj, discord.Message):
             if obj.attachments:
