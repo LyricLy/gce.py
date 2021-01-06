@@ -58,4 +58,4 @@ async def request(session, lang, code, input_=None):
 
 async def get_languages(session):
     async with session.get("https://tio.run/languages.json") as resp:
-        return sorted((await resp.json()).keys())
+        return dict(sorted((await resp.json()).items()))

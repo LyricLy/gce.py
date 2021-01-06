@@ -111,7 +111,7 @@ for key, (converter, default, desc) in valid_opts.items():
 
 
 def match_lang(term, score, limit):
-    return map(lambda x: x[0], process.extractBests(term, bot.langs + custom.languages, processor=lambda s: s.split("-", 1)[0], score_cutoff=score, limit=limit))
+    return map(lambda x: x[0], process.extractBests(term, list(bot.langs.keys()) + custom.languages, processor=lambda s: s.split("-", 1)[0], score_cutoff=score, limit=limit))
 
 @bot.command()
 async def langs(ctx, *, search=None):
@@ -212,7 +212,7 @@ async def execute_code(message, lang, code, explicit):
             await message.channel.send(f"<https://mystb.in/{key}.txt>", embed=embed)
         await msg.delete()
 
-@bot.command(aliases=["do-over", "replicate", "redo", "again"])
+@bot.command(aliases=["replicate", "redo", "again"])
 async def repeat(ctx):
     """Repeat the last TIO invokation you performed in explicit mode, allowing you to give new input."""
     if ctx.author not in bot.results:
@@ -264,6 +264,17 @@ async def on_message(message):
             if matches:
                 o += f" Did you mean one of: {', '.join(matches)}"
             return await message.channel.send(o)
+
+
+@bot.command(aliases=["example"])
+async def helloworld(ctx, lang):
+    try:
+        data = bot.langs[aliases.get(lang.lower(), lang.lower())]
+    except KeyError:
+        return await ctx.send("I couldn't find that language on TIO.")
+    name = data["name"]
+    code = data["tests"]["helloWorld"]["request"][0]["payload"][".code.tio"].replace("```", "`\u200b``")
+    await ctx.send(f'"Hello, World!" in {data["name"]}:\n```{lang}\n{code}```')
 
 
 async def setup():
