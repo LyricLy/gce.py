@@ -161,11 +161,11 @@ aliases = {
     "k": "k-kona"
 }
 
-async def send_debug(channel, debug, info):
-    e = discord.Embed(title="Debug", description="".join(debug.splitlines(True)[:-4])[:2000])
+async def format_debug(debug, info):
+    e = discord.Embed(title="Debug", description=discord.utils.escape_markdown("".join(debug.splitlines(True)[:-4])[:2000]))
     if info:
         e.add_field(name="Info", value=info)
-    await channel.send(embed=e)
+    return e
 
 async def execute_code(message, lang, code, explicit):
     input_ = ""
@@ -206,7 +206,7 @@ async def execute_code(message, lang, code, explicit):
             await message.channel.send(f"<https://mystb.in/{key}.txt>")
         await msg.delete()
     if explicit and (info or not debug.endswith(b"0")):
-        await send_debug(message.channel, debug.decode(), info.decode())
+        await message.channel.send(embed=format_debug(debug.decode(), info.decode()))
 
 @bot.command(aliases=["do-over", "replicate", "redo", "again"])
 async def repeat(ctx):
@@ -222,7 +222,7 @@ async def debug(ctx):
     if ctx.author not in bot.results:
         return await ctx.send("You haven't used TIO.py recently.")
     _, _, debug, info = bot.results[ctx.author]
-    await send_debug(ctx.channel, debug.decode(), info.decode())
+    await ctx.send(embed=format_debug(debug.decode(), info.decode()))
 
 @bot.event
 async def on_message(message):
