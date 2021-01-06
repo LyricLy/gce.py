@@ -161,7 +161,7 @@ aliases = {
     "k": "k-kona"
 }
 
-async def format_debug(debug, info):
+def format_debug(debug, info):
     e = discord.Embed(title="Debug", description=discord.utils.escape_markdown("".join(debug.splitlines(True)[:-4])[:2000]))
     if info:
         e.add_field(name="Info", value=info)
@@ -190,11 +190,16 @@ async def execute_code(message, lang, code, explicit):
         output, debug, info = await tio.request(bot.session, lang, code, input_)
     bot.results[message.author] = (lang, code, debug, info)
 
+    if explicit and (info or not debug.endswith(b"0")):
+        embed = format_debug(debug.decode(), info.decode())
+    else:
+        embed = None
+
     if len(output) < 2000:
         if output.strip():
-            await message.channel.send(output.decode())
+            await message.channel.send(output.decode(), embed=embed)
         elif explicit:
-            await message.channel.send("(no output)")
+            await message.channel.send("(no output)", embed=embed)
     elif explicit:
         msg = await message.channel.send(f"Output is too large. Would you like it as a link?")
         await msg.add_reaction("📎")
@@ -203,10 +208,8 @@ async def execute_code(message, lang, code, explicit):
         if reaction.emoji == "📎":
             async with bot.session.post("https://mystb.in/documents", data=output) as resp:
                 key = (await resp.json())["key"]
-            await message.channel.send(f"<https://mystb.in/{key}.txt>")
+            await message.channel.send(f"<https://mystb.in/{key}.txt>", embed=embed)
         await msg.delete()
-    if explicit and (info or not debug.endswith(b"0")):
-        await message.channel.send(embed=format_debug(debug.decode(), info.decode()))
 
 @bot.command(aliases=["do-over", "replicate", "redo", "again"])
 async def repeat(ctx):
