@@ -152,6 +152,7 @@ aliases = {
     "java": "java-jdk",
     "c": "c-gcc",
     "cpp": "cpp-gcc",
+    "c++": "cpp-gcc",
     "js": "javascript-node",
     "javascript": "javascript-node",
     "hs": "haskell",
