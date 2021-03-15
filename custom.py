@@ -1,5 +1,6 @@
 import asyncio
 import io
+import os
 import time
 import shlex
 
@@ -22,3 +23,5 @@ async def execute(lang, code, input_, options, args):
     except asyncio.TimeoutError:
         # if we try to read the data, we're likely just to deadlock
         return b"", b"", b"Execution timed out after 15s."
+    finally:
+        os.remove(filename)
