@@ -3,6 +3,7 @@ import io
 import os
 import time
 import shlex
+import uuid
 
 
 with open("languages") as f:
@@ -11,7 +12,7 @@ with open("languages") as f:
 async def execute(lang, code, input_, options, args):
     if isinstance(code, str):
         code = code.encode()
-    filename = f".code_{hash(code)}"
+    filename = f".code_{uuid.uuid4()}.{lang.lower()}"
     with open(filename, "wb") as f:
         f.write(code)
     start = time.perf_counter()
