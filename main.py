@@ -252,7 +252,7 @@ async def on_message(message):
             if explicit:
                 if message.attachments:
                     code = await message.attachments[0].read()
-                    lang_match = re.search(rf"^(.*?)<@!?{bot.user.id}>\s*{LANG}(.*?)\n", message.content)
+                    lang_match = re.search(rf"^(.*?)<@!?{bot.user.id}>\s*{LANG}(.*?)$", message.content, re.MULTILINE)
                     if lang_match:
                         lang = lang_match.group(2)
                         options = lang_match.group(1)
@@ -266,7 +266,7 @@ async def on_message(message):
         else:
             lang, code = match.group(1), match.group(2)
             if explicit:
-                arg_match = re.search(f"^(.*?)<@!?{bot.user.id}>(.*?)\n", message.content)
+                arg_match = re.search(f"^(.*?)<@!?{bot.user.id}>(.*?)$", message.content, re.MULTILINE)
                 if arg_match:
                     options = arg_match.group(1)
                     args = arg_match.group(2)
