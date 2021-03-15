@@ -164,10 +164,17 @@ aliases = {
 }
 
 def format_debug(debug, info):
-    e = discord.Embed(title="Debug", description=discord.utils.escape_markdown("".join(debug.splitlines(True)[:-4])[:2000]))
-    if info:
-        e.add_field(name="Info", value=info)
-    return e
+    output = discord.utils.escape_markdown(debug)
+    if len(output) < 2000:
+        e = discord.Embed(title="Debug", description=output)
+        if info:
+            e.add_field(name="Info", value=info)
+        return {"embed": e}
+    else:
+        v = {"file": discord.File(io.StringIO(debug), filename="debug.txt")}
+        if info:
+            v["embed"] = discord.Embed(title="Info", description=info).set_footer(text="Debug information is in the below file.")
+        return v
 
 async def execute_code(message, lang, code, explicit, options, args):
     input_ = ""
@@ -195,13 +202,13 @@ async def execute_code(message, lang, code, explicit, options, args):
     if explicit and (info or not debug.endswith(b"0")):
         embed = format_debug(debug.decode(), info.decode())
     else:
-        embed = None
+        embed = {}
 
     if len(output) < 2000:
         if output.strip():
-            await message.channel.send(output.decode(), embed=embed)
+            await message.channel.send(output.decode(), **embed)
         elif explicit:
-            await message.channel.send("(no output)", embed=embed)
+            await message.channel.send("(no output)", **embed)
     elif explicit:
         msg = await message.channel.send(f"Output is too large. Would you like it as a link?")
         await msg.add_reaction("📎")
@@ -210,7 +217,7 @@ async def execute_code(message, lang, code, explicit, options, args):
         if reaction.emoji == "📎":
             async with bot.session.post("https://mystb.in/documents", data=output) as resp:
                 key = (await resp.json())["key"]
-            await message.channel.send(f"<https://mystb.in/{key}.txt>", embed=embed)
+            await message.channel.send(f"<https://mystb.in/{key}.txt>", **embed)
         await msg.delete()
 
 @bot.command(aliases=["replicate", "redo", "again"])
@@ -227,7 +234,7 @@ async def debug(ctx):
     if ctx.author not in bot.results:
         return await ctx.send("You haven't used TIO.py recently.")
     _, _, _, _, debug, info = bot.results[ctx.author]
-    await ctx.send(embed=format_debug(debug.decode(), info.decode()))
+    await ctx.send(**format_debug(debug.decode(), info.decode()))
 
 @bot.event
 async def on_message(message):
@@ -259,7 +266,7 @@ async def on_message(message):
         else:
             lang, code = match.group(1), match.group(2)
             if explicit:
-                arg_match = re.search(f"^(.*?)<@!?{bot.user.id}>(.*?)\n")
+                arg_match = re.search(f"^(.*?)<@!?{bot.user.id}>(.*?)\n", message.content)
                 if arg_match:
                     options = arg_match.group(1)
                     args = arg_match.group(2)

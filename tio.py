@@ -22,7 +22,7 @@ class Request:
     def render_bytes(self):
         output = b""
         for name, values in self.variables:
-            output += b"V" + name + b"\x00" + f"{len(value.split(b' '))}".encode() + b"\x00" + b"".join(value + b"\x00" for value in values)
+            output += b"V" + name + b"\x00" + f"{len(values)}".encode() + b"\x00" + b"".join(value + b"\x00" for value in values)
         for name, content in self.files:
             output += b"F" + name + b"\x00" + f"{len(content)}".encode() + b"\x00" + content + b"\x00"
         output += b"R"
