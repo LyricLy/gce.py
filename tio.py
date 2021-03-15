@@ -16,20 +16,20 @@ class Request:
     def add_file(self, name, content):
         self.files.append((name, content))
 
-    def add_variable(self, name, value):
-        self.variables.append((name, value))
+    def add_variable(self, name, *values):
+        self.variables.append((name, values))
 
     def render_bytes(self):
         output = b""
-        for name, value in self.variables:
-            output += b"V" + name + b"\x00" + f"{len(value.split(b' '))}".encode() + b"\x00" + value + b"\x00"
+        for name, values in self.variables:
+            output += b"V" + name + b"\x00" + f"{len(value.split(b' '))}".encode() + b"\x00" + b"".join(value + b"\x00" for value in values)
         for name, content in self.files:
             output += b"F" + name + b"\x00" + f"{len(content)}".encode() + b"\x00" + content + b"\x00"
         output += b"R"
         return zlib.compress(output, 9)[2:-4]
 
 
-async def request(session, lang, code, input_=None):
+async def request(session, lang, code, input_=None, options=(), args=()):
     if isinstance(lang, str):
         lang = lang.encode()
     if isinstance(code, str):
@@ -39,6 +39,8 @@ async def request(session, lang, code, input_=None):
 
     r = Request()
     r.add_variable(b"lang", lang)
+    r.add_variable(b"TIO_OPTIONS", *map(str.encode, options))
+    r.add_variable(b"args", *map(str.encode, args))
     r.add_file(b".code.tio", code)
     if input_:
         r.add_file(b".input.tio", input_)

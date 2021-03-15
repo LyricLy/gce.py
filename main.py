@@ -4,6 +4,7 @@ import re
 import traceback
 import sys
 import socket
+import shlex
 import os
 import io
 from subprocess import PIPE
@@ -168,7 +169,7 @@ def format_debug(debug, info):
         e.add_field(name="Info", value=info)
     return e
 
-async def execute_code(message, lang, code, explicit):
+async def execute_code(message, lang, code, explicit, options, args):
     input_ = ""
     if explicit:
         msg = await message.channel.send("Enter some input for the program to take, or click the X to run with no input.")
@@ -186,10 +187,10 @@ async def execute_code(message, lang, code, explicit):
         await msg.delete()
 
     if lang in custom.languages:
-        output, debug, info = await custom.execute(lang, code, input_)
+        output, debug, info = await custom.execute(lang, code, input_, options, args)
     else:
-        output, debug, info = await tio.request(bot.session, lang, code, input_)
-    bot.results[message.author] = (lang, code, debug, info)
+        output, debug, info = await tio.request(bot.session, lang, code, input_, options, args)
+    bot.results[message.author] = (lang, code, options, args, debug, info)
 
     if explicit and (info or not debug.endswith(b"0")):
         embed = format_debug(debug.decode(), info.decode())
@@ -217,15 +218,15 @@ async def repeat(ctx):
     """Repeat the last TIO invokation you performed in explicit mode, allowing you to give new input."""
     if ctx.author not in bot.results:
         return await ctx.send("You haven't used TIO.py recently.")
-    lang, code, *_ = bot.results[ctx.author]
-    await execute_code(ctx.message, lang, code, True)
+    lang, code, options, args, *_ = bot.results[ctx.author]
+    await execute_code(ctx.message, lang, code, True, args)
 
 @bot.command(aliases=["error", "err"])
 async def debug(ctx):
     """Post the debug embed of the last TIO invokation you performed."""
     if ctx.author not in bot.results:
         return await ctx.send("You haven't used TIO.py recently.")
-    _, _, debug, info = bot.results[ctx.author]
+    _, _, _, _, debug, info = bot.results[ctx.author]
     await ctx.send(embed=format_debug(debug.decode(), info.decode()))
 
 @bot.event
@@ -236,15 +237,19 @@ async def on_message(message):
         return
 
     explicit = bot.user in message.mentions
+    options = ""
+    args = ""
     if explicit or get_options(message.author, "implicit"):
         match = re.search(CODEBLOCK, message.content)
         if not match:
             if explicit:
                 if message.attachments:
                     code = await message.attachments[0].read()
-                    lang_match = re.match(rf"<@!?{bot.user.id}>\s*{LANG}", message.content)
+                    lang_match = re.search(rf"^(.*?)<@!?{bot.user.id}>\s*{LANG}(.*?)\n", message.content)
                     if lang_match:
-                        lang = lang_match.group(1)
+                        lang = lang_match.group(2)
+                        options = lang_match.group(1)
+                        args = lang_match.group(3)
                     else:
                         return await message.channel.send("Please send a language in your message to use an attachment.")
                 else:
@@ -253,11 +258,16 @@ async def on_message(message):
                 return
         else:
             lang, code = match.group(1), match.group(2)
+            if explicit:
+                arg_match = re.search(f"^(.*?)<@!?{bot.user.id}>(.*?)\n")
+                if arg_match:
+                    options = arg_match.group(1)
+                    args = arg_match.group(2)
 
         lang = aliases.get(lang.lower(), lang.lower())
 
         if lang in custom.languages or lang in bot.langs:
-            await execute_code(message, lang, code, explicit)
+            await execute_code(message, lang, code, explicit, shlex.split(options), shlex.split(args))
         elif explicit:
             o = f"`{lang}` is not a supported language."
             matches = list(match_lang(lang, 88, 8))
