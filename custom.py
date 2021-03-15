@@ -3,10 +3,8 @@ import io
 import time
 
 
-languages = {
-    "brainfuck": "tritium -b -z {code}",
-    "letra": "python ../letra.py {code}",
-}
+with open("languages") as f:
+    languages = {(x := l.split(":"))[0].strip(): x[1].strip() for l in f.read().splitlines()}
 
 async def execute(lang, code, input_):
     if isinstance(code, str):
