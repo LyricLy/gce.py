@@ -18,7 +18,7 @@ async def execute(lang, code, input_, options, args):
     sh = await asyncio.create_subprocess_shell(s, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
     try:
         stdout, stderr = await asyncio.wait_for(sh.communicate(input_.encode()), timeout=15)
-        return stdout, stderr + f"\nReal time: {time.perf_counter()-start:.3f} s\na\na\na\n{sh.returncode}".encode(), b""
+        return stdout, stderr + f"\nReal time: {time.perf_counter()-start:.3f} s\nExit code: {sh.returncode}".encode(), b""
     except asyncio.TimeoutError:
         # if we try to read the data, we're likely just to deadlock
         return b"", b"", b"Execution timed out after 15s."
