@@ -266,7 +266,7 @@ async def on_message(message):
         else:
             lang, code = match.group(1), match.group(2)
             if explicit:
-                arg_match = re.search(f"^(.*?)<@!?{bot.user.id}>(.*?)$", message.content, re.MULTILINE)
+                arg_match = re.search(f"^(?:.*```)?(.*?)<@!?{bot.user.id}>(.*?)$", message.content, re.MULTILINE)
                 if arg_match:
                     options = arg_match.group(1)
                     args = arg_match.group(2)
