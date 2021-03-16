@@ -16,7 +16,7 @@ async def execute(lang, code, input_, options, args):
     with open(filename, "wb") as f:
         f.write(code)
     start = time.perf_counter()
-    s = languages[lang].format(code=filename, options=" ".join(map(shlex.quote, options)), args=" ".join(map(shlex.quote, args)))
+    s = languages[lang].format(code=filename, options=" ".join(map(shlex.quote, options)), args=" ".join(map(shlex.quote, args)), input=shlex.quote(input_))
     sh = await asyncio.create_subprocess_shell(s, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
     try:
         stdout, stderr = await asyncio.wait_for(sh.communicate(input_.encode()), timeout=15)
