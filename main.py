@@ -210,7 +210,7 @@ async def execute_code(message, lang, code, explicit, options, args):
         elif explicit:
             await message.channel.send("(no output)", **embed)
     elif explicit:
-        await message.channel.send(file=discord.File(fp=io.BytesIO(output), filename="output"))
+        await message.channel.send(file=discord.File(fp=io.BytesIO(output), filename="output.txt"))
 
 @bot.command(aliases=["replicate", "redo", "again"])
 async def repeat(ctx):
