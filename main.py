@@ -210,15 +210,7 @@ async def execute_code(message, lang, code, explicit, options, args):
         elif explicit:
             await message.channel.send("(no output)", **embed)
     elif explicit:
-        msg = await message.channel.send(f"Output is too large. Would you like it as a link?")
-        await msg.add_reaction("📎")
-        await msg.add_reaction("❌")
-        reaction, _ = await bot.wait_for("reaction_add", check=lambda r, u: u == message.author and r.message.id == msg.id and str(r.emoji) in ["📎", "❌"])
-        if reaction.emoji == "📎":
-            async with bot.session.post("https://mystb.in/documents", data=output) as resp:
-                key = (await resp.json())["key"]
-            await message.channel.send(f"<https://mystb.in/{key}.txt>", **embed)
-        await msg.delete()
+        await message.channel.send(file=discord.File(fp=io.BytesIO(output), filename="output"))
 
 @bot.command(aliases=["replicate", "redo", "again"])
 async def repeat(ctx):
