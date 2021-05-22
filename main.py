@@ -199,7 +199,7 @@ async def execute_code(message, lang, code, explicit, options, args):
         output, debug, info = await tio.request(bot.session, lang, code, input_, options, args)
     bot.results[message.author] = (lang, code, options, args, debug, info)
 
-    if explicit and (info or not debug.endswith(b"0")):
+    if explicit and (info or not debug.endswith(b" 0")):
         embed = format_debug(debug.decode(), info.decode())
     else:
         embed = {}
