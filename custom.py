@@ -25,6 +25,6 @@ async def execute(lang, code, input_, options, args):
         return stdout, stderr + f"\nReal time: {time.perf_counter()-start:.3f} s\nExit code: {sh.returncode}".encode(), b""
     except asyncio.TimeoutError:
         # if we try to read the data, we're likely just to deadlock
-        return b"", b"", bf"Execution timed out after {TIMEOUT}s."
+        return b"", b"", b"Execution timed out after " + str(TIMEOUT).encode() + "s."
     finally:
         os.remove(filename)
