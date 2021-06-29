@@ -165,7 +165,8 @@ aliases = {
 
 def format_debug(debug, info):
     stderr, extra = debug.rsplit("\n\n", 1)
-    output = f"```{stderr.replace('```', '`\u200b``')}```\n{extra}"
+    stderr = stderr.replace('```', '`\u200b``')
+    output = f"```{stderr}```\n{extra}"
     if len(output) < 2000:
         e = discord.Embed(title="Debug", description=output)
         if info:
@@ -281,8 +282,10 @@ async def on_message(message):
         try:
             lang, code, options, args = await get_code(message, explicit)
         except NoCodeblockError:
+            if not explicit:
+                return
             success = False
-            if explicit and message.reference and message.reference.resolved:
+            if message.reference and message.reference.resolved:
                 # try to process the replied-to message instead
                 try:
                     lang, code, options, args = await get_code(message.reference.resolved, True)
