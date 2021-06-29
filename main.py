@@ -164,7 +164,8 @@ aliases = {
 }
 
 def format_debug(debug, info):
-    output = discord.utils.escape_markdown(debug)
+    stderr, extra = debug.rsplit("\n\n", 1)
+    output = f"```{stderr.replace('```', '`\u200b``')}```\n{extra}"
     if len(output) < 2000:
         e = discord.Embed(title="Debug", description=output)
         if info:
