@@ -229,40 +229,71 @@ async def debug(ctx):
     _, _, _, _, debug, info = bot.results[ctx.author]
     await ctx.send(**format_debug(debug.decode(), info.decode()))
 
+
+class CodeParseError(Exception):
+    pass
+
+class NoCodeblockError(CodeParseError):
+    pass
+
+class NoAttachmentLanguage(CodeParseError):
+    pass
+
+async def get_code(message, explicit):
+    options = ""
+    args = ""
+    match = re.search(CODEBLOCK, message.content)
+    if not match:
+        if explicit:
+            if message.attachments:
+                code = await message.attachments[0].read()
+                lang_match = re.search(rf"^(.*?)<@!?{bot.user.id}>\s*{LANG}(.*?)$", message.content, re.MULTILINE)
+                if lang_match:
+                    lang = lang_match.group(2)
+                    options = lang_match.group(1)
+                    args = lang_match.group(3)
+                else:
+                    raise NoAttachmentLanguage
+            else:
+                raise NoCodeblockError
+        else:
+            raise NoCodeblockError
+    else:
+        lang, code = match.group(1), match.group(2)
+        if explicit:
+            arg_match = re.search(f"^(?:.*```)?(.*?)<@!?{bot.user.id}>(.*?)$", message.content, re.MULTILINE)
+            if arg_match:
+                options = arg_match.group(1)
+                args = arg_match.group(2)
+    return lang, code, options, args
+    
+
 @bot.event
 async def on_message(message):
     await bot.process_commands(message)
-
     if message.author.bot:
         return
 
-    explicit = bot.user in message.mentions
-    options = ""
-    args = ""
+    # only check for explicit mentions
+    explicit = bot.user in message.mentions and (f"<@{bot.user.id}>" in message.content or f"<@!{bot.user.id}>" in message.content)
+
     if explicit or get_options(message.author, "implicit"):
-        match = re.search(CODEBLOCK, message.content)
-        if not match:
-            if explicit:
-                if message.attachments:
-                    code = await message.attachments[0].read()
-                    lang_match = re.search(rf"^(.*?)<@!?{bot.user.id}>\s*{LANG}(.*?)$", message.content, re.MULTILINE)
-                    if lang_match:
-                        lang = lang_match.group(2)
-                        options = lang_match.group(1)
-                        args = lang_match.group(3)
-                    else:
-                        return await message.channel.send("Please send a language in your message to use an attachment.")
+        try:
+            lang, code, options, args = await get_code(message, explicit)
+        except NoCodeblockError:
+            success = False
+            if explicit and message.reference and message.reference.resolved:
+                # try to process the replied-to message instead
+                try:
+                    lang, code, options, args = await get_code(message.reference.resolved, True)
+                except CodeParseError:
+                    pass
                 else:
-                    return await message.channel.send("I didn't find a code block or attachment in or on your message.")
-            else:
-                return
-        else:
-            lang, code = match.group(1), match.group(2)
-            if explicit:
-                arg_match = re.search(f"^(?:.*```)?(.*?)<@!?{bot.user.id}>(.*?)$", message.content, re.MULTILINE)
-                if arg_match:
-                    options = arg_match.group(1)
-                    args = arg_match.group(2)
+                    success = True
+            if not success:
+                return await message.channel.send("Your message doesn't have a code block (remember to specify the language after the ```) or an attachment.")
+        except NoAttachmentLanguage:
+            return await message.channel.send("Please send a language name after the mention if you want me to run an attachment.")
 
         lang = aliases.get(lang.lower(), lang.lower())
 
