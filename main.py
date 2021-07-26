@@ -200,7 +200,7 @@ def format_debug(debug, info):
         output = f"```{stderr}```\n{extra}"
     except ValueError:
         output = debug
-    if len(output) < 2000:
+    if len(output) < 4096:
         e = discord.Embed(title="Debug", description=output)
         if info:
             e.add_field(name="Info", value=info)
@@ -278,7 +278,7 @@ async def repeat(ctx):
 @bot.command(aliases=["error", "err"])
 async def debug(ctx, message: discord.Message = None):
     """Post the debug embed of the last TIO invokation you performed, or the invokation corresponding to a given message."""
-    message = message or message.reference and message.reference.resolved
+    message = message or ctx.message.reference and ctx.message.reference.resolved
     if message:
         if message not in bot.results_by_msg:
             return await ctx.send("The message provided doesn't correspond to an invokation I know of. You can invoke it by replying to it and pinging me in the reply.")
