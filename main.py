@@ -6,6 +6,7 @@ import sys
 import socket
 import shlex
 import os
+import time
 import io
 from subprocess import PIPE
 
@@ -18,9 +19,37 @@ import tio
 import custom
 
 
-bot = commands.Bot(command_prefix="tio!", help_command=commands.DefaultHelpCommand(width=100))
+bot = commands.Bot(
+    command_prefix="tio!",
+    help_command=commands.DefaultHelpCommand(width=100),
+    description="A bot that runs code. Use tio!truehelp for more info on actually using me.",
+)
 bot.load_extension("jishaku")
 
+TRUE_HELP = """
+The simplest way to run code is just to use a code block with a language associated, like so:
+\`\`\`python
+print("Hello, World!")
+\`\`\`
+
+You can see a list of the language names you can use by running the `tio!langs` command, or you can search with e.g. `tio!langs pyth`. For most common languages, \
+there are also aliases for the names Discord's syntax highlighting will accept, like `py` for `python`, which will work with the bot.
+
+If a program produces too much output, or it exits with a non-zero exit code (signifying a failure), the bot will not produce any output. To see the stderr output \
+of a program after TIO.py has executed it, use the `tio!debug` command. By default, it will output from the last time you invoked the bot, but you can specify \
+a different invokation by replying to the message or providing a message ID (hold shift while copying it if the message is from a different channel) or a message link.
+
+To provide input and see debug output by default, you can use the bot in "explicit mode" by pinging it in the message with the code block. You can disable "implicit" \
+invokation using `tio!opt implicit false`.
+
+You can provide an attachment using explicit mode by specifying a language name after the ping, e.g. `@TIO.py python`. Then simply attach a file.
+
+You can provide options to the compiler or interpreter, or command line arguments, by writing them around the ping. Options go before, and arguments go after. \
+If you are passing an attachment, the language name goes before the arguments. For example, one might write `-O3 @TIO.py c arg1 arg2`.
+
+If you reply to a message containing a suitable code block and ping the bot, it will invoke that code for you in explicit mode. There is also a `tio!repeat` command \
+which you can use to repeat your last invokation in explicit mode and allows you to provide different input.
+"""
 
 @bot.event
 async def on_ready():
@@ -143,6 +172,7 @@ LANG = r"([a-zA-Z_\-+.0-9]+)"
 CODEBLOCK = re.compile(rf"```{LANG}\n(.*?)```", re.DOTALL)
 
 bot.results = {}
+bot.results_by_msg = {}
 
 aliases = {
     "bf": "brainfuck",
@@ -181,6 +211,23 @@ def format_debug(debug, info):
             v["embed"] = discord.Embed(title="Info", description=info).set_footer(text="Debug information is in the below file.")
         return v
 
+class Invokation:
+    def __init__(self, run_at, message, lang, code, options, args, debug, info):
+        self.lang = lang
+        self.run_at = run_at
+        self.message = message
+        self.code = code
+        self.options = options
+        self.args = args
+        self.debug = debug
+        self.info = info
+
+async def get_last_invoke(ctx):
+    if ctx.author not in bot.results or time.time() - bot.results[ctx.author].run_at > 60:
+        await ctx.send("You haven't used TIO.py recently.")
+        return None
+    return bot.results[ctx.author]
+
 async def execute_code(message, lang, code, explicit, options, args):
     input_ = ""
     if explicit:
@@ -202,7 +249,10 @@ async def execute_code(message, lang, code, explicit, options, args):
         output, debug, info = await custom.execute(lang, code, input_, options, args)
     else:
         output, debug, info = await tio.request(bot.session, lang, code, input_, options, args)
-    bot.results[message.author] = (lang, code, options, args, debug, info)
+
+    invokation = Invokation(time.time(), message, lang, code, options, args, debug, info)
+    bot.results[message.author] = invokation
+    bot.results_by_msg[message] = invokation
 
     if explicit and (info or not debug.endswith(b" 0")):
         embed = format_debug(debug.decode(), info.decode())
@@ -219,19 +269,35 @@ async def execute_code(message, lang, code, explicit, options, args):
 
 @bot.command(aliases=["replicate", "redo", "again"])
 async def repeat(ctx):
-    """Repeat the last TIO invokation you performed in explicit mode, allowing you to give new input."""
-    if ctx.author not in bot.results:
-        return await ctx.send("You haven't used TIO.py recently.")
-    lang, code, options, args, *_ = bot.results[ctx.author]
-    await execute_code(ctx.message, lang, code, True, args)
+    """Repeat the last TIO invokation you performed in explicit mode."""
+    r = await get_last_invoke(ctx)
+    if not r:
+        return
+    await execute_code(ctx.message, r.lang, r.code, True, r.options, r.args)
 
 @bot.command(aliases=["error", "err"])
-async def debug(ctx):
-    """Post the debug embed of the last TIO invokation you performed."""
-    if ctx.author not in bot.results:
-        return await ctx.send("You haven't used TIO.py recently.")
-    _, _, _, _, debug, info = bot.results[ctx.author]
-    await ctx.send(**format_debug(debug.decode(), info.decode()))
+async def debug(ctx, message: discord.Message = None):
+    """Post the debug embed of the last TIO invokation you performed, or the invokation corresponding to a given message."""
+    message = message or message.reference and message.reference.resolved
+    if message:
+        if message not in bot.results_by_msg:
+            return await ctx.send("The message provided doesn't correspond to an invokation I know of. You can invoke it by replying to it and pinging me in the reply.")
+        r = bot.results_by_msg[message]
+    else:
+        r = await get_last_invoke(ctx)
+        if not r:
+            return
+    content = f"Debug from invokation by {r.message.author.display_name} at <t:{r.run_at:.0f}:T> in {bot.langs[r.lang]['name']}."
+    d = format_debug(r.debug.decode(), r.info.decode())
+    if r.message.channel == ctx.channel:
+        try:
+            return await r.message.reply(content, **d, mention_author=False)
+        except discord.HTTPException:
+            # message gone
+            await ctx.send(content, **d)
+    else:
+        d["embed"].url = r.message.jump_url
+        await ctx.send(content, **d)
 
 
 class CodeParseError(Exception):
@@ -315,6 +381,7 @@ async def on_message(message):
 
 @bot.command(aliases=["example"])
 async def helloworld(ctx, lang):
+    """Show the 'Hello, World!' program for a TIO language of your choice."""
     try:
         data = bot.langs[aliases.get(lang.lower(), lang.lower())]
     except KeyError:
@@ -322,6 +389,10 @@ async def helloworld(ctx, lang):
     name = data["name"]
     code = data["tests"]["helloWorld"]["request"][0]["payload"][".code.tio"].replace("```", "`\u200b``")
     await ctx.send(f'"Hello, World!" in {data["name"]}:\n```{lang}\n{code}```')
+
+@bot.command()
+async def truehelp(ctx):
+    await ctx.send(TRUE_HELP)
 
 
 async def setup():
