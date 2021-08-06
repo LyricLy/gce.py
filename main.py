@@ -287,7 +287,11 @@ async def debug(ctx, message: discord.Message = None):
         r = await get_last_invoke(ctx)
         if not r:
             return
-    content = f"Debug from invokation by {r.message.author.display_name} at <t:{r.run_at:.0f}:T> in {bot.langs[r.lang]['name']}."
+    if r.lang in bot.langs:
+        name = bot.langs[r.lang]
+    else:
+        name = custom.languages[r.lang][0]
+    content = f"Debug from invokation by {r.message.author.display_name} at <t:{r.run_at:.0f}:T> in {name}."
     d = format_debug(r.debug.decode(), r.info.decode())
     if r.message.channel == ctx.channel:
         try:
