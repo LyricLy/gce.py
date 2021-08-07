@@ -288,7 +288,7 @@ async def debug(ctx, message: discord.Message = None):
         if not r:
             return
     if r.lang in bot.langs:
-        name = bot.langs[r.lang]
+        name = bot.langs[r.lang]["name"]
     else:
         name = custom.languages[r.lang][0]
     content = f"Debug from invokation by {r.message.author.display_name} at <t:{r.run_at:.0f}:T> in {name}."
