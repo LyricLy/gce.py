@@ -140,6 +140,47 @@ for key, (converter, default, desc) in valid_opts.items():
 
 
 
+class LeftButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(style=discord.ButtonStyle.primary, label="Back")
+
+    async def callback(self, interaction):
+        self.view.page -= 1
+        await interaction.response.edit_message(embed=self.view.embed(), view=self.view)
+
+class RightButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(style=discord.ButtonStyle.primary, label="Next")
+
+    async def callback(self, interaction):
+        self.view.page += 1
+        await interaction.response.edit_message(embed=self.view.embed(), view=self.view)
+
+class ListView(discord.ui.View):
+    def __init__(self, langs):
+        super().__init__(timeout=60)
+        self.langs = langs
+        self.per_page = 20
+        self.page = 1
+        self.left = LeftButton()
+        self.right = RightButton()
+        if len(langs) > self.per_page:
+            self.add_item(self.left)
+            self.add_item(self.right)
+
+    def embed(self):
+        start = (self.page-1)*self.per_page
+        end = self.page*self.per_page
+        self.left.disabled = self.page == 1
+        self.right.disabled = end >= len(self.langs)
+        page = self.langs[start:end]
+        e = discord.Embed()
+        for field in (page[:10], page[10:]):
+            if not field:
+                continue
+            e.add_field(name="\u200b", value="\n".join(map("\u200b".join, field)), inline=True)
+        return e
+
 def match_lang(term, score, limit):
     return map(lambda x: x[0], process.extractBests(term, list(bot.langs.keys()) + list(custom.languages.keys()), processor=lambda s: s.split("-", 1)[0], score_cutoff=score, limit=limit))
 
@@ -147,23 +188,13 @@ def match_lang(term, score, limit):
 async def langs(ctx, *, search=None):
     """Find usable languages."""
     if search:
-        langs = match_lang(search, 88, 20)
+        langs = list(match_lang(search, 88, 20))
     else:
         langs = list(set(bot.langs) | set(custom.languages))
 
-    output = []
-    length = -1
-    for lang in langs:
-        length += len(lang) + 1
-        if length < 2000:
-            output.append(lang)
-        else:
-            length = 0
-            await ctx.send(" ".join(output))
-            output = []
-
-    if output:
-        await ctx.send(" ".join(output))
+    if langs:
+        view = ListView(langs)
+        await ctx.send(embed=view.embed(), view=view)
     else:
         await ctx.send("No matches found.")
 
