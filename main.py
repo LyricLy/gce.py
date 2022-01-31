@@ -188,7 +188,7 @@ def match_lang(term, score, limit):
 async def langs(ctx, *, search=None):
     """Find usable languages."""
     if search:
-        langs = list(match_lang(search, 88, 20))
+        langs = list(match_lang(search.replace("\u200b", ""), 88, 20))
     else:
         langs = list(set(bot.langs) | set(custom.languages))
 
@@ -370,7 +370,7 @@ async def get_code(message, explicit):
             if arg_match:
                 options = arg_match.group(1)
                 args = arg_match.group(2)
-    return lang, code, options, args
+    return lang.replace("\u200b", ""), code, options, args
     
 
 @bot.event
@@ -417,8 +417,9 @@ async def on_message(message):
 @bot.command(aliases=["example"])
 async def helloworld(ctx, lang):
     """Show the 'Hello, World!' program for a TIO language of your choice."""
+    lang = lang.replace("\u200b", "").lower()
     try:
-        data = bot.langs[aliases.get(lang.lower(), lang.lower())]
+        data = bot.langs[aliases.get(lang, lang)]
     except KeyError:
         return await ctx.send("I couldn't find that language on TIO.")
     name = data["name"]
