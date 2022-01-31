@@ -178,8 +178,11 @@ class ListView(discord.ui.View):
         for field in [page[i:i+10] for i in range(0, len(page), 10)]:
             if not field:
                 continue
-            e.add_field(name="\u200b", value="\n".join(map("\u200b".join, field)), inline=True)
+            e.add_field(name="\u200b", value="\n".join(field), inline=True)
         return e
+
+    async def on_timeout(self):
+        await self.message.delete()
 
 def match_lang(term, score, limit):
     return map(lambda x: x[0], process.extractBests(term, list(bot.langs.keys()) + list(custom.languages.keys()), processor=lambda s: s.split("-", 1)[0], score_cutoff=score, limit=limit))
@@ -194,7 +197,7 @@ async def langs(ctx, *, search=None):
 
     if langs:
         view = ListView(langs)
-        await ctx.send(embed=view.embed(), view=view)
+        view.message = await ctx.send(embed=view.embed(), view=view)
     else:
         await ctx.send("No matches found.")
 
