@@ -160,7 +160,7 @@ class ListView(discord.ui.View):
     def __init__(self, langs):
         super().__init__(timeout=60)
         self.langs = langs
-        self.per_page = 20
+        self.per_page = 40
         self.page = 1
         self.left = LeftButton()
         self.right = RightButton()
@@ -175,7 +175,7 @@ class ListView(discord.ui.View):
         self.right.disabled = end >= len(self.langs)
         page = self.langs[start:end]
         e = discord.Embed()
-        for field in (page[:10], page[10:]):
+        for field in [page[i:i+10] for i in range(0, len(page), 10)]:
             if not field:
                 continue
             e.add_field(name="\u200b", value="\n".join(map("\u200b".join, field)), inline=True)
