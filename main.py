@@ -160,7 +160,7 @@ class ListView(discord.ui.View):
     def __init__(self, langs):
         super().__init__(timeout=60)
         self.langs = langs
-        self.per_page = 40
+        self.per_page = 60
         self.page = 1
         self.left = LeftButton()
         self.right = RightButton()
