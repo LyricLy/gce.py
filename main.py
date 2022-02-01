@@ -185,7 +185,7 @@ class ListView(discord.ui.View):
         await self.message.delete()
 
 def match_lang(term, score, limit):
-    return map(lambda x: x[0], process.extractBests(term, list(bot.langs.keys()) + list(custom.languages.keys()), processor=lambda s: s.split("-", 1)[0], score_cutoff=score, limit=limit))
+    return map(lambda x: x[0], process.extractBests(term, list(bot.langs.keys()) + list(custom.languages.keys()), processor=lambda s: s.rsplit("-", 1)[0], score_cutoff=score, limit=limit))
 
 @bot.command()
 async def langs(ctx, *, search=None):
