@@ -224,7 +224,7 @@ aliases = {
     "perl": "perl5",
     "vb": "vb-core",
     "x86asm": "assembly",
-    "k": "k-kona"
+    "k": "k-ngn",
 }
 
 def format_debug(debug, info):
