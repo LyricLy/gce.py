@@ -19,10 +19,18 @@ import tio
 import custom
 
 
+intents = discord.Intents(
+    guilds=True,
+    messages=True,
+    message_content=True,
+    reactions=True,
+)
+
 bot = commands.Bot(
     command_prefix="tio!",
     help_command=commands.DefaultHelpCommand(width=100),
     description="A bot that runs code. Use tio!truehelp for more info on actually using me.",
+    intents=intents,
 )
 bot.load_extension("jishaku")
 
