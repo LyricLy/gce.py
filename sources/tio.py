@@ -1,7 +1,6 @@
 import zlib
 
 import aiohttp
-import requests
 
 from .common import *
 
