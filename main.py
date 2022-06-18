@@ -130,7 +130,7 @@ class Run(discord.ui.Modal, title="Run code"):
     async def on_submit(self, interaction):
         await parse_invokation(interaction, self.lang.value, self.code.value if self.code.value is not None else self.code_value, self.stdin.value, self.options.value, self.args.value)
 
-@bot.tree.command(guild=discord.Object(318633320890236930))
+@bot.tree.command()
 async def run(
     interaction, lang: str,
     code: Optional[str], attachment: Optional[discord.Attachment],
@@ -140,14 +140,14 @@ async def run(
         return await interaction.response.send_message("Unknown language.", ephemeral=True)
     await interaction.response.send_modal(Run(lang, await attachment.read() if attachment else code.encode() if code else b"", input, options, arguments))
 
-@bot.tree.command(guild=discord.Object(318633320890236930))
+@bot.tree.command()
 async def eval(
     interaction, lang: str, code: str,
     input: Optional[str] = "", options: Optional[str] = "", arguments: Optional[str] = "",
 ):
     await parse_invokation(interaction, lang, code, input, options, arguments)
 
-@bot.tree.context_menu(guild=discord.Object(318633320890236930))
+@bot.tree.context_menu()
 async def invoke(interaction, message: discord.Message):
     if inv := Invokation.results.get(message):
         r = Run(inv.lang.id, inv.code, inv.stdin, inv.options, inv.args)
@@ -155,7 +155,7 @@ async def invoke(interaction, message: discord.Message):
         r = Run(*m, "", "", "")
     await interaction.response.send_modal(r)
 
-@bot.tree.context_menu(guild=discord.Object(318633320890236930))
+@bot.tree.context_menu()
 async def debug(interaction, message: discord.Message):
     await Invokation.debug(interaction, message)
 
