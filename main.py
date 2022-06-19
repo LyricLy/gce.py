@@ -19,6 +19,7 @@ intents = discord.Intents(
 
 bot = commands.Bot(
     command_prefix="gce!",
+    help_command=None,
     intents=discord.Intents(
         guilds=True,
         messages=True,
