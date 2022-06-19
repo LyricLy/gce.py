@@ -90,17 +90,16 @@ class Invokation:
         last = self.message.channel.last_message_id
         return last if last != self.last_bot_message else self.end
 
-    async def send_public_message(self, *args, **kwargs):
+    async def send_public_message(self, content=None, embed=None, files=None):
         if self.output_message:
-            if args:
-                kwargs["content"] = args[0]
-            kwargs["attachments"] = kwargs.pop("files")
-            kwargs.pop("reference")
-            kwargs.pop("mention_author")
-            return await self.output_message.edit(**{"content": None, "attachments": [], "embed": None} | kwargs)
+            return await self.output_message.edit(content=content, embed=embed, attachments=files)
 
-        self.end = self.now()
-        msg = await (self.message or self.interaction).channel.send(*args, **kwargs)
+        if self.message:
+            self.end = self.now()
+            msg = await self.message.channel.send(content, embed=embed, files=files, reference=self.message if self.now() != self.start else None, mention_author=False)
+        else:
+            msg = await self.interaction.channel.send(content, embed=embed, files=files)
+
         self.last_bot_message = msg.id
         Invokation.results[msg] = self
         self.output_message = msg
@@ -134,7 +133,7 @@ class Invokation:
             embed = discord.Embed().set_footer(text="No output")
 
         if public:
-            await self.send_public_message(content, embed=embed, files=files, reference=self.get_reply(), mention_author=False)
+            await self.send_public_message(content, embed=embed, files=files)
         elif self.interaction.response.is_done():
             await self.interaction.edit_original_message(content=content, embed=embed, attachments=files, view=ControlPanel(self))
         else:
@@ -154,7 +153,7 @@ class Invokation:
                 files.insert(0, r)
             else:
                 content = r + content
-        await self.send_public_message(content, files=files, reference=self.get_reply(), mention_author=False)
+        await self.send_public_message(content, files=files)
 
     async def execute(self):
         if self.message:
