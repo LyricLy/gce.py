@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import discord
 import textwrap
@@ -15,7 +16,7 @@ def render(b, name, *, codeblock=False, extension=None):
         return discord.File(io.BytesIO(b), f"{name}.{extension or 'txt'}")
     if codeblock:
         out = out.replace('```', '`\u200b``')
-        return f"```{extension or ''}\n\u200b{out}\u200b```"
+        return f"```{extension or ''}\n\u200b{out}```"
     return out
 
 
@@ -157,8 +158,16 @@ class Invokation:
 
     async def execute(self):
         if self.message:
-            async with self.message.channel.typing():
-                await self.lang.execute(self)
+            async def typer():
+                # don't type for 2 seconds
+                # 2 seconds is enough for programs that don't compile or that error quickly to finish
+                # we don't want to generate a typing indicator for programs that fail immediately, because the indicator will last for 5 seconds
+                await asyncio.sleep(2)
+                async with self.message.channel.typing():
+                    await asyncio.sleep(120)
+            t = asyncio.get_event_loop().create_task(typer())
+            await self.lang.execute(self)
+            t.cancel()
 
             Invokation.results[self.message] = self
             output = render(self.stdout, "output")
