@@ -1,10 +1,9 @@
-from . import tio, custom
+from . import tio, custom, ato
 
-# TODO add ATO, consider piston runner
-SOURCES = (tio, custom)
+SOURCES = (tio, ato, custom)
 
 languages = {}
 
-async def populate_languages():
+async def populate_languages(session):
     for source in SOURCES:
-        await source.populate_languages(languages)
+        await source.populate_languages(session, languages)

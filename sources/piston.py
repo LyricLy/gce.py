@@ -32,9 +32,8 @@ async def execute(inv):
         inv.stderr = stderr
         inv.success = d["run"]["code"] == 0
 
-async def populate_languages(languages):
-    async with aiohttp.ClientSession() as session:
-        async with session.get("http://localhost:2000/api/v2/runtimes") as resp:
-            for lang in await resp.json():
-                name = lang["language"]
-                languages[name] = Language(name, name, guess_extension(name), execute)
+async def populate_languages(session, languages):
+    async with session.get("http://localhost:2000/api/v2/runtimes") as resp:
+        for lang in await resp.json():
+            name = lang["language"]
+            languages[name] = Language(name, name, guess_extension(name), execute)

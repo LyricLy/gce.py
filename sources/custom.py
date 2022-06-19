@@ -38,6 +38,6 @@ async def execute(inv):
     finally:
         os.remove(filename)
 
-async def populate_languages(langs):
+async def populate_languages(_, langs):
     for name, (display, _, ext) in languages.items():
         langs[name] = Language(name, display, ext, execute)

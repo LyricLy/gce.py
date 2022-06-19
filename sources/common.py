@@ -27,4 +27,4 @@ def guess_extension(name, prettify=None):
         if re.search(pat, name):
             return ext
     # shrug
-    return prettify or name
+    return None

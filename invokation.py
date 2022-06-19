@@ -176,9 +176,9 @@ class Invokation:
     async def debug(interaction, message):
         inv = Invokation.results.get(message)
         if not inv:
-            return await interaction.send_message("That message isn't associated with a completed evaluation.", ephemeral=True)
+            return await interaction.response.send_message("That message isn't associated with a completed evaluation.", ephemeral=True)
         if inv.message.author != interaction.user:
-            return await interaction.send_message("You didn't invoke that evaluation.", ephemeral=True)
+            return await interaction.response.send_message("You didn't invoke that evaluation.", ephemeral=True)
 
         inv.interaction = interaction
         await inv.send_full()

@@ -171,9 +171,10 @@ async def lang_autocomplete(interaction, current):
 
 async def setup():
     global session
-    await bot.load_extension("jishaku")
-    await sources.populate_languages()
     session = aiohttp.ClientSession()
+    await sources.populate_languages(session)
+    await bot.load_extension("jishaku")
+    
 bot.setup_hook = setup
 
 with open("token.txt") as f:
