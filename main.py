@@ -154,6 +154,8 @@ async def invoke(interaction, message: discord.Message):
         r = Run(inv.lang.id, inv.code, inv.stdin, inv.options, inv.args)
     elif m := parse_text(message):
         r = Run(*m, "", "", "")
+    else:
+        return await interaction.response.send_message("There's no executable code in this message.", ephemeral=True)
     await interaction.response.send_modal(r)
 
 @bot.tree.context_menu()
