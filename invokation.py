@@ -11,7 +11,7 @@ def render(b, name, *, codeblock=False, extension=None):
         out = b.decode()
     except UnicodeDecodeError:
         out = None
-    if out is None or "\n".join(textwrap.wrap(out, 80, tabsize=4, replace_whitespace=False)).count("\n") > 10:
+    if out is None or textwrap.fill(out, 80, tabsize=4, replace_whitespace=False).count("\n") > 10:
         return discord.File(io.BytesIO(b), f"{name}.{extension or 'txt'}")
     if codeblock:
         out = out.replace('```', '`\u200b``')

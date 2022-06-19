@@ -45,6 +45,9 @@ async def populate_languages(session, languages):
         # this can be streamed instead, but I don't care
         data = msgpack.unpackb(await resp.read())
         for key, value in data.items():
+            # prefer names and conventions from TIO
             better = RENAMES.get(key, key).replace("_", "-").lower()
             actual_names[better] = key
-            languages[better] = Language(better, value["name"], value.get("SE_class") or guess_extension(better) or better, execute)
+            name = languages[better].name if better in languages else value["name"]
+
+            languages[better] = Language(better, name, value.get("SE_class") or guess_extension(better) or better, execute)
