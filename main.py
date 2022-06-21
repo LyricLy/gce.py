@@ -162,12 +162,15 @@ async def invoke(interaction, message: discord.Message):
 async def debug(interaction, message: discord.Message):
     await Invokation.debug(interaction, message)
 
+def normal(s):
+    return "".join(c for c in s.lower() if c.isalpha())
+
 @run.autocomplete("lang")
 @eval.autocomplete("lang")
 async def lang_autocomplete(interaction, current):
     if not current:
         return []
-    l = [discord.app_commands.Choice(name=lang.name, value=lang.id) for lang in sources.languages.values() if lang.name.lower().startswith(current.lower()) or lang.id.lower().startswith(current.lower())]
+    l = [discord.app_commands.Choice(name=lang.name, value=lang.id) for lang in sources.languages.values() if normal(lang.name).startswith(normal(current)) or lang.id.lower().startswith(current.lower())]
     l.sort(key=lambda c: c.value)
     return l[:25]
 
