@@ -36,6 +36,7 @@ RENAMES = {
     "python": "python3",
     "cplusplus_gcc": "cpp-gcc",
     "objective_cplusplus_gcc": "objective-c-gcc",
+    "clang": "c-clang",
 }
 
 actual_names = {}
