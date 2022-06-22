@@ -84,9 +84,6 @@ class Invokation:
             self.end = old.end
             self.last_bot_message = old.last_bot_message
 
-    def get_reply(self):
-        return self.message if self.message and self.now() != self.start else None
-
     def now(self):
         last = self.message.channel.last_message_id
         return last if last != self.last_bot_message else self.end
