@@ -60,5 +60,5 @@ language_info = {}
 async def populate_languages(session, languages):
     async with session.get("https://tio.run/languages.json") as resp:
         for key, value in (await resp.json()).items():
-            languages[key] = Language(key, value["name"], guess_extension(key) or value.get("prettify") or key, execute)
+            languages[key] = Language(key, value["name"], guess_extension(key) or value.get("prettify") or "txt", execute)
             language_info[key] = "cflags" in value.get("unmask", [])
