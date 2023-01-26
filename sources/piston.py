@@ -30,10 +30,10 @@ async def execute(inv):
         stderr += d["run"]["stderr"]
         inv.stdout = d["run"]["stdout"]
         inv.stderr = stderr
-        inv.success = d["run"]["code"] == 0
+        inv.success = d["run"]["code"] == 0 if d["run"]["signal"] != "SIGKILL" else None
 
 async def populate_languages(session, languages):
     async with session.get("http://localhost:2000/api/v2/runtimes") as resp:
         for lang in await resp.json():
             name = lang["language"]
-            languages[name] = Language(name, name, guess_extension(name), execute)
+            languages[name] = Language(name, name, execute)

@@ -8,14 +8,8 @@ import discord
 from discord.ext import commands
 
 import sources
-from invokation import Invokation
+from invokation import Invokation, STDOUT, STDERR
 
-
-intents = discord.Intents(
-    guilds=True,
-    messages=True,
-    message_content=True,
-)
 
 bot = commands.Bot(
     command_prefix="gce!",
@@ -24,6 +18,7 @@ bot = commands.Bot(
         guilds=True,
         messages=True,
         message_content=True,
+        reactions=True,
     ),
     allowed_mentions=discord.AllowedMentions.none(),
 )
@@ -73,106 +68,74 @@ async def on_message(message):
     if message.author.bot or not message.guild:
         return
     if m := parse_text(message.content):
-        await Invokation(session, *m, message=message).execute()
+        await Invokation(session, message, *m).execute()
 
 @bot.event
 async def on_message_edit(before, after):
     if after.author.bot or not after.guild:
         return
     if before.content != after.content and (m := parse_text(after.content)):
-        await Invokation(session, *m, message=after).execute()
+        await Invokation(session, after, *m).execute()
 
 @bot.event
 async def on_message_delete(message):
     await Invokation.delete(message)
 
+@bot.event
+async def on_raw_reaction_add(payload):
+    if payload.user_id == bot.user.id:
+        return
 
-async def parse_invokation(interaction, lang, code, stdin, options, args):
-    lang = sources.languages.get(lang)
-    if not lang:
-        return await interaction.response.send_message("Unknown language.", ephemeral=True)
-    if not isinstance(code, bytes):
-        code = code.encode()
-    try:
-        options = shlex.split(options)
-    except ValueError as e:
-        return await interaction.response.send_message("Invalid options: {e}", ephemeral=True)
-    try:
-        args = shlex.split(args)
-    except ValueError as e:
-        return await interaction.response.send_message("Invalid arguments: {e}", ephemeral=True)
+    if str(payload.emoji) == STDOUT:
+        await Invokation.jostle_stdout(payload.message_id, True)
+    elif str(payload.emoji) == STDERR:
+        await Invokation.jostle_stderr(payload.message_id, True)
 
-    await Invokation(session, lang, code, stdin, options, args, interaction=interaction).execute()
+@bot.event
+async def on_raw_reaction_remove(payload):
+    if payload.user_id == bot.user.id:
+        return
 
-class Run(discord.ui.Modal, title="Run code"):
-    code = discord.ui.TextInput(label="Code", style=discord.TextStyle.paragraph, required=False)
+    if str(payload.emoji)[1:] == STDOUT[2:]:
+        await Invokation.jostle_stdout(payload.message_id, False)
+    elif str(payload.emoji)[1:] == STDERR[2:]:
+        await Invokation.jostle_stderr(payload.message_id, False)
+
+
+class Options(discord.ui.Modal, title="Edit options"):
     options = discord.ui.TextInput(label="Options", required=False, placeholder="Options to the interpreter or compiler.")
-    stdin = discord.ui.TextInput(label="Input", required=False)
+    stdin = discord.ui.TextInput(label="Input", required=False, placeholder="Standard input.")
     args = discord.ui.TextInput(label="Arguments", required=False, placeholder="Arguments to the program.")
-    lang = discord.ui.TextInput(label="Language", max_length=32)
 
-    def __init__(self, lang, code, stdin, options, args):
+    def __init__(self, inv):
         super().__init__()
-        self.lang.default = lang
-        self.lang.placeholder = lang
-        self.options.default = options
-        try:
-            c = code.decode()
-        except UnicodeDecodeError:
-            c = None
-        if c is None or len(c) > 4000:
-            self.code_value = code
-            self.remove_item(self.code)
-        else:
-            self.code.default = c
-        self.stdin.default = stdin
-        self.args.default = args
+        self.inv = inv
+        self.options.default = shlex.join(inv.options)
+        self.args.default = shlex.join(inv.args)
 
     async def on_submit(self, interaction):
-        await parse_invokation(interaction, self.lang.value, self.code.value if self.code.value is not None else self.code_value, self.stdin.value, self.options.value, self.args.value)
+        try:
+            options = shlex.split(self.options.value)
+        except ValueError as e:
+            return await interaction.response.send_message("Invalid options: {e}", ephemeral=True)
+        try:
+            args = shlex.split(self.args.value)
+        except ValueError as e:
+            return await interaction.response.send_message("Invalid arguments: {e}", ephemeral=True)
+        await interaction.response.defer()
 
-@bot.tree.command()
-async def run(
-    interaction, lang: str,
-    code: Optional[str], attachment: Optional[discord.Attachment],
-    input: Optional[str] = "", options: Optional[str] = "", arguments: Optional[str] = "",
-):
-    if lang not in sources.languages:
-        return await interaction.response.send_message("Unknown language.", ephemeral=True)
-    await interaction.response.send_modal(Run(lang, await attachment.read() if attachment else code.encode() if code else b"", input, options, arguments))
+        inv = Invokation(session, self.inv.message, self.inv.lang, self.inv.code)
+        inv.stdin = self.stdin.value
+        inv.options = options
+        inv.args = args
+        await inv.execute()
 
-@bot.tree.command()
-async def eval(
-    interaction, lang: str, code: str,
-    input: Optional[str] = "", options: Optional[str] = "", arguments: Optional[str] = "",
-):
-    await parse_invokation(interaction, lang, code, input, options, arguments)
-
-@bot.tree.context_menu()
-async def invoke(interaction, message: discord.Message):
-    if inv := Invokation.results.get(message):
-        r = Run(inv.lang.id, inv.code, inv.stdin, inv.options, inv.args)
-    elif m := parse_text(message):
-        r = Run(*m, "", "", "")
+@bot.tree.context_menu(name="Edit options")
+async def edit_options(interaction, message: discord.Message):
+    if inv := Invokation.results.get(message.id):
+        await interaction.response.send_modal(Options(inv))
     else:
-        return await interaction.response.send_message("There's no executable code in this message.", ephemeral=True)
-    await interaction.response.send_modal(r)
-
-@bot.tree.context_menu()
-async def debug(interaction, message: discord.Message):
-    await Invokation.debug(interaction, message)
-
-def normal(s):
-    return "".join(c for c in s.lower() if c.isalpha())
-
-@run.autocomplete("lang")
-@eval.autocomplete("lang")
-async def lang_autocomplete(interaction, current):
-    if not current:
-        return []
-    l = [discord.app_commands.Choice(name=lang.name, value=lang.id) for lang in sources.languages.values() if normal(lang.name).startswith(normal(current)) or lang.id.lower().startswith(current.lower())]
-    l.sort(key=lambda c: c.value)
-    return l[:25]
+        return await interaction.response.send_message("There's no code in this message.", ephemeral=True)
 
 
 async def setup():

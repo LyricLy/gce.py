@@ -49,10 +49,8 @@ async def execute(inv):
     output, debug, info = d
     inv.stdout = output
     *_, debug, spare = [b""] + debug.rsplit(b"\n\n", 1)
-    if spare.endswith(b" 0"):
-        inv.success = True
+    inv.success = spare.endswith(b" 0") if info != b"The request exceeded the 60 second time limit and was terminated." else None
     inv.stderr = debug
-    inv.info = info.decode()
 
 
 language_info = {}
@@ -60,5 +58,5 @@ language_info = {}
 async def populate_languages(session, languages):
     async with session.get("https://tio.run/languages.json") as resp:
         for key, value in (await resp.json()).items():
-            languages[key] = Language(key, value["name"], guess_extension(key) or value.get("prettify") or "txt", execute)
+            languages[key] = Language(key, value["name"], execute)
             language_info[key] = "cflags" in value.get("unmask", [])

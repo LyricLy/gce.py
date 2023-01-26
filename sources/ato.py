@@ -20,24 +20,15 @@ async def execute(inv):
                 inv.stdout = ""
                 inv.stderr = ""
                 inv.success = False
-                match resp.data:
-                    case aiohttp.WSCloseCode.MESSAGE_TOO_BIG:
-                        inv.info = "Request exceeded the maximum size, which is 65536 bytes."
-                    case aiohttp.WSCloseCode.INTERNAL_ERROR:
-                        inv.info = "Something went wrong inside ATO."
-                    case _:
-                        inv.info = "An unknown error occurred during execution."
                 return
             data = msgpack.unpackb(resp.data)
             if "Stdout" in data:
-                inv.stdout = data["Stdout"]
+                inv.stdout += data["Stdout"]
             if "Stderr" in data:
-                inv.stderr = data["Stderr"]
+                inv.stderr += data["Stderr"]
             if "Done" in data:
                 d = data["Done"]
-                if d["timed_out"]:
-                    inv.info = "Process timed out after 60s."
-                inv.success = d["status_type"] == "exited" and d["status_value"] == 0
+                inv.success = d["status_type"] == "exited" and d["status_value"] == 0 if not d["timed_out"] else None
                 break
 
 
@@ -59,4 +50,4 @@ async def populate_languages(session, languages):
             actual_names[better] = key
             name = languages[better].name if better in languages else value["name"]
 
-            languages[better] = Language(better, name, value.get("se_class") or guess_extension(better) or "txt", execute)
+            languages[better] = Language(better, name, execute)

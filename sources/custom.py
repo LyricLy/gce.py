@@ -34,10 +34,10 @@ async def execute(inv):
         inv.success = sh.returncode == 0
     except asyncio.TimeoutError:
         # if we try to read the data, we're likely just to deadlock
-        inv.info = f"Execution timed out after {TIMEOUT}s."
+        inv.success = None
     finally:
         os.remove(filename)
 
 async def populate_languages(_, langs):
     for name, (display, _, ext) in languages.items():
-        langs[name] = Language(name, display, ext, execute)
+        langs[name] = Language(name, display, execute)
