@@ -133,7 +133,7 @@ class Invokation:
         is_stdout = bool(self.stdout)
         is_stderr = bool(self.stderr)
         if self.send_stdout is None:
-            self.send_stdout = self.success and is_stdout
+            self.send_stdout = bool(self.success) and is_stdout
         if self.send_stderr is None:
             self.send_stderr = False
 
