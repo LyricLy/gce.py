@@ -128,7 +128,7 @@ class Invokation:
 
         send_running.cancel()
         if sent_running:
-            loop.create_task(self.message.remove_reaction(RUNNING, me))
+            loop.create_task(self.message.clear_reactions())
 
         is_stdout = bool(self.stdout)
         is_stderr = bool(self.stderr)
