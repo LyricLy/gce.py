@@ -6,6 +6,7 @@ from typing import Optional
 
 import discord
 from discord.ext import commands
+from thefuzz import process
 
 import sources
 from invokation import Invokation, STDOUT, STDERR
@@ -136,6 +137,68 @@ async def edit_options(interaction, message: discord.Message):
         await interaction.response.send_modal(Options(inv))
     else:
         return await interaction.response.send_message("There's no code in this message.", ephemeral=True)
+
+
+class LeftButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(style=discord.ButtonStyle.primary, label="Back")
+
+    async def callback(self, interaction):
+        self.view.page -= 1
+        await interaction.response.edit_message(embed=self.view.embed(), view=self.view)
+
+class RightButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(style=discord.ButtonStyle.primary, label="Next")
+
+    async def callback(self, interaction):
+        self.view.page += 1
+        await interaction.response.edit_message(embed=self.view.embed(), view=self.view)
+
+class ListView(discord.ui.View):
+    def __init__(self, langs):
+        super().__init__(timeout=60)
+        self.langs = langs
+        self.per_page = 60
+        self.page = 1
+        self.left = LeftButton()
+        self.right = RightButton()
+        if len(langs) > self.per_page:
+            self.add_item(self.left)
+            self.add_item(self.right)
+
+    def embed(self):
+        start = (self.page-1)*self.per_page
+        end = self.page*self.per_page
+        self.left.disabled = self.page == 1
+        self.right.disabled = end >= len(self.langs)
+        page = self.langs[start:end]
+        e = discord.Embed()
+        for field in [page[i:i+10] for i in range(0, len(page), 10)]:
+            if not field:
+                continue
+            e.add_field(name="\u200b", value="\n".join(field), inline=True)
+        return e
+
+    async def on_timeout(self):
+        await self.message.delete()
+
+def match_lang(term, score, limit):
+    return [x[0] for x in process.extractBests(term, [l.id for l in sources.languages.values()], processor=lambda s: s.rsplit("-", 1)[0], score_cutoff=score, limit=limit)]
+
+@bot.command()
+async def langs(ctx, *, search=None):
+    """Find usable languages."""
+    if search:
+        langs = match_lang(search, 88, 20)
+    else:
+        langs = [l.id for l in sources.languages.values()]
+
+    if langs:
+        view = ListView(langs)
+        view.message = await ctx.send(embed=view.embed(), view=view)
+    else:
+        await ctx.send("No matches found.")
 
 
 async def setup():
