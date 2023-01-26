@@ -121,7 +121,7 @@ class Invokation:
             await self.message.add_reaction(RUNNING)
 
         sent_running = False
-        clear_reactions = loop.create_task(self.message.clear_reactions())
+        clear_reactions = loop.create_task(self.message.clear_reactions() if self.is_reboot else asyncio.sleep(0))
         send_running = loop.create_task(running())
 
         await asyncio.gather(clear_reactions, self.lang.execute(self))
