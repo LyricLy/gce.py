@@ -14,12 +14,11 @@ TIMEOUT = 30
 with open("languages") as f:
     languages = {}
     for line in f:
-        m = re.match(r"^(.*?)\.(.*?)\((.*?)\):(.*?)$", line)
+        m = re.match(r"^(.*?)\((.*?)\):(.*?)$", line)
         name = m.group(1).strip()
-        ext = m.group(2).strip()
-        display = m.group(3).strip()
-        cmd = m.group(4).strip()
-        languages[name] = (display, cmd, ext)
+        display = m.group(2).strip()
+        cmd = m.group(3).strip()
+        languages[name] = display, cmd
 
 async def execute(inv):
     filename = f".code_{random.randint(1, 368307)}.{inv.lang.id}"
@@ -39,5 +38,5 @@ async def execute(inv):
         os.remove(filename)
 
 async def populate_languages(_, langs):
-    for name, (display, _, ext) in languages.items():
+    for name, (display, _) in languages.items():
         langs[name] = Language(name, display, execute)
