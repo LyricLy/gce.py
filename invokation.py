@@ -160,8 +160,8 @@ class Invokation:
     @staticmethod
     async def delete(message):
         if (inv := Invokation.results.get(message.id)) and inv.output_message:
+            del Invokation.results[message.id]
             await inv.output_message.delete()
-            inv.output_message = None
 
     @staticmethod
     async def jostle_stdout(message_id, value):
