@@ -30,7 +30,7 @@ async def on_ready():
     print(f"Ready on {bot.user}")
 
 
-CODEBLOCK = re.compile(rf"```([a-zA-Z_\-+.0-9]*)\n(.+?)```", re.DOTALL)
+CODEBLOCK = re.compile(rf"(?<!\\)(?:\\\\)*```([a-zA-Z_\-+.0-9]*)\n(.+?)```", re.DOTALL)
 
 ALIASES = {
     "bf": "brainfuck",
