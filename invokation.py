@@ -116,8 +116,8 @@ class Invokation:
 
             if self.is_reboot:
                 await self.message.clear_reactions()
-            await self.message.add_reaction(RUNNING)
             sent_running = True
+            await self.message.add_reaction(RUNNING)
 
             if self.output_message:
                 await self.output_message.edit(content="Message edited. Recalculating...", embed=None, attachments=[])
