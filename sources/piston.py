@@ -36,4 +36,4 @@ async def populate_languages(session, languages):
     async with session.get("http://localhost:2000/api/v2/runtimes") as resp:
         for lang in await resp.json():
             name = lang["language"]
-            languages[name] = Language(name, name, execute)
+            languages[name] = Language(name, name, execute, "locally with Piston")

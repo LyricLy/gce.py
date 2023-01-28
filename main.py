@@ -136,7 +136,14 @@ async def edit_options(interaction, message: discord.Message):
     if inv := Invokation.results.get(message.id):
         await interaction.response.send_modal(Options(inv))
     else:
-        return await interaction.response.send_message("There's no code in this message.", ephemeral=True)
+        await interaction.response.send_message("There's no code in this message.", ephemeral=True)
+
+@bot.tree.context_menu()
+async def info(interaction, message: discord.Message):
+    if inv := Invokation.results.get(message.id):
+        await interaction.response.send_message(f"Executed {inv.lang.runner} as {inv.lang.name}.", ephemeral=True)
+    else:
+        await interaction.response.send_message("There's no code in this message.", ephemeral=True)
 
 
 class LeftButton(discord.ui.Button):

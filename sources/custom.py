@@ -39,4 +39,4 @@ async def execute(inv):
 
 async def populate_languages(_, langs):
     for name, (display, _) in languages.items():
-        langs[name] = Language(name, display, execute)
+        langs[name] = Language(name, display, execute, "locally")

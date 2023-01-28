@@ -1,4 +1,4 @@
 from collections import namedtuple
 
 
-Language = namedtuple("Language", "id name execute")
+Language = namedtuple("Language", "id name execute runner")

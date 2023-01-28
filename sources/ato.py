@@ -50,4 +50,4 @@ async def populate_languages(session, languages):
             actual_names[better] = key
             name = languages[better].name if better in languages else value["name"]
 
-            languages[better] = Language(better, name, execute)
+            languages[better] = Language(better, name, execute, "with ATO")
