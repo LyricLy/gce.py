@@ -30,7 +30,7 @@ async def on_ready():
     print(f"Ready on {bot.user}")
 
 
-CODEBLOCK = re.compile(rf"```([a-zA-Z_\-+.0-9]+)\n(.*?)```", re.DOTALL)
+CODEBLOCK = re.compile(rf"```([a-zA-Z_\-+.0-9]*)\n(.+?)```", re.DOTALL)
 
 ALIASES = {
     "bf": "brainfuck",
@@ -55,8 +55,10 @@ ALIASES = {
 
 
 def parse_text(text):
-    if m := CODEBLOCK.search(text):
+    for m in CODEBLOCK.finditer(text):
         lang = m.group(1)
+        if not lang:
+            continue
         lang = ALIASES.get(lang, lang)
         code = m.group(2)
         if l := sources.languages.get(lang):
