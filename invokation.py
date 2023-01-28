@@ -43,8 +43,6 @@ class Invokation:
         self.args = args
         self.stdout = b""
         self.stderr = b""
-        self.send_stdout = None
-        self.send_stderr = None
         self.is_reboot = False
         self.success = False
 
@@ -55,8 +53,6 @@ class Invokation:
             self.stdin = old.stdin
             self.options = old.options
             self.args = old.args
-            self.send_stdout = old.send_stdout
-            self.send_stderr = old.send_stderr
             self.is_reboot = True
 
     async def send_public_message(self, content=None, embed=None, files=None):
@@ -132,10 +128,8 @@ class Invokation:
 
         is_stdout = bool(self.stdout)
         is_stderr = bool(self.stderr)
-        if self.send_stdout is None:
-            self.send_stdout = bool(self.success) and is_stdout
-        if self.send_stderr is None:
-            self.send_stderr = False
+        self.send_stdout = bool(self.success) and is_stdout
+        self.send_stderr = False
 
         async def send_reactions():
             if self.success:
