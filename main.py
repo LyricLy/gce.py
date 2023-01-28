@@ -75,7 +75,7 @@ async def on_message(message):
 async def on_message_edit(before, after):
     if after.author.bot or not after.guild:
         return
-    if before.content != after.content and (m := parse_text(after.content)):
+    if (m := parse_text(after.content)) and (not (inv := Invokation.results.get(after.id)) or m != (inv.lang, inv.code)):
         await Invokation(session, after, *m).execute()
 
 @bot.event
@@ -124,6 +124,9 @@ class Options(discord.ui.Modal, title="Edit options"):
         except ValueError as e:
             return await interaction.response.send_message("Invalid arguments: {e}", ephemeral=True)
         await interaction.response.defer()
+
+        if not (self.stdin.value != self.inv.stdin or options != self.inv.options or args != self.inv.args):
+            return
 
         inv = Invokation(session, self.inv.message, self.inv.lang, self.inv.code)
         inv.stdin = self.stdin.value

@@ -32,7 +32,7 @@ def render(b, name, *, file=False, codeblock=False):
 class Invokation:
     results = {}
 
-    def __init__(self, session, message, lang, code, stdin="", options=(), args=()):
+    def __init__(self, session, message, lang, code, stdin="", options=[], args=[]):
         self.session = session
         self.lang = lang
         self.message = message
@@ -92,7 +92,7 @@ class Invokation:
                 embed.add_field(name="Options", value=shlex.join(self.options), inline=False)
             if self.stdin:
                 embed.add_field(name="Input", value=self.stdin, inline=False)
-            if self.options:
+            if self.args:
                 embed.add_field(name="Arguments", value=shlex.join(self.args), inline=False)
             for name, value in texts:
                 embed.add_field(name=name, value=value, inline=False)
@@ -112,19 +112,20 @@ class Invokation:
         async def running():
             nonlocal sent_running
             # wait a bit for quick programs to finish right away without wasting time reacting
-            await asyncio.gather(clear_reactions, asyncio.sleep(2))
-            sent_running = True
+            await asyncio.sleep(2)
+
+            if self.is_reboot:
+                await self.message.clear_reactions()
             await self.message.add_reaction(RUNNING)
+            sent_running = True
+
+            if self.output_message:
+                await self.output_message.edit(content="Message edited. Recalculating...", embed=None, attachments=[])
 
         sent_running = False
-        clear_reactions = loop.create_task(self.message.clear_reactions() if self.is_reboot else asyncio.sleep(0))
         send_running = loop.create_task(running())
-
-        await asyncio.gather(clear_reactions, self.lang.execute(self))
-
+        await self.lang.execute(self)
         send_running.cancel()
-        if sent_running:
-            loop.create_task(self.message.clear_reactions())
 
         is_stdout = bool(self.stdout)
         is_stderr = bool(self.stderr)
@@ -132,6 +133,9 @@ class Invokation:
         self.send_stderr = False
 
         async def send_reactions():
+            if sent_running or self.is_reboot:
+                await self.message.clear_reactions()
+
             if self.success:
                 await self.message.add_reaction(SUCCESS)
             elif self.success is None:
@@ -162,11 +166,25 @@ class Invokation:
     @staticmethod
     async def jostle_stdout(message_id, value):
         if inv := Invokation.results.get(message_id):
-            inv.send_stdout += 2*value-1
-            await inv.send_output()
+            if not value:
+                inv.send_stdout -= 1
+                if not inv.send_stdout:
+                    await inv.send_output()
+            else:
+                send = not inv.send_stdout
+                inv.send_stdout += 1
+                if send:
+                    await inv.send_output()
 
     @staticmethod
     async def jostle_stderr(message_id, value):
         if inv := Invokation.results.get(message_id):
-            inv.send_stderr += 2*value-1
-            await inv.send_output()
+            if not value:
+                inv.send_stderr -= 1
+                if not inv.send_stderr:
+                    await inv.send_output()
+            else:
+                send = not inv.send_stderr
+                inv.send_stderr += 1
+                if send:
+                    await inv.send_output()
