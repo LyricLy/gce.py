@@ -82,6 +82,7 @@ async def on_message_edit(before, after):
         if not inv or m != (inv.lang, inv.code):
             await Invokation(session, after, *m).execute()
     elif inv:
+        await after.clear_reactions()
         await Invokation.delete(after)
     
 
