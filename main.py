@@ -77,8 +77,13 @@ async def on_message(message):
 async def on_message_edit(before, after):
     if after.author.bot or not after.guild:
         return
-    if (m := parse_text(after.content)) and (not (inv := Invokation.results.get(after.id)) or m != (inv.lang, inv.code)):
-        await Invokation(session, after, *m).execute()
+    inv = Invokation.results.get(after.id)
+    if m := parse_text(after.content):
+        if not inv or m != (inv.lang, inv.code):
+            await Invokation(session, after, *m).execute()
+    elif inv:
+        await Invokation.delete(after)
+    
 
 @bot.event
 async def on_message_delete(message):
