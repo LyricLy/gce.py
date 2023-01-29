@@ -68,7 +68,7 @@ def parse_text(text):
 @bot.event
 async def on_message(message):
     await bot.process_commands(message)
-    if message.author.bot or not message.guild:
+    if message.author.bot or not message.guild or message.author.id in (261243340752814085, 179957318941671424):
         return
     if m := parse_text(message.content):
         await Invokation(session, message, *m).execute()
