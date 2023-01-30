@@ -54,7 +54,10 @@ ALIASES = {
 }
 
 
-def parse_text(text):
+def parse_text(msg):
+    text = msg.content
+    if msg.author.id in (261243340752814085, 179957318941671424) and "gce" not in text.lower():
+        return None
     for m in CODEBLOCK.finditer(text):
         lang = m.group(1)
         if not lang:
@@ -70,9 +73,7 @@ async def on_message(message):
     await bot.process_commands(message)
     if message.author.bot or not message.guild:
         return
-    if message.author.id in (261243340752814085, 179957318941671424):
-        await Invokation(session, message, sources.languages.get("python3"), message.content.encode()).execute()
-    elif m := parse_text(message.content):
+    if m := parse_text(message):
         await Invokation(session, message, *m).execute()
 
 @bot.event
@@ -80,7 +81,7 @@ async def on_message_edit(before, after):
     if after.author.bot or not after.guild:
         return
     inv = Invokation.results.get(after.id)
-    if m := parse_text(after.content):
+    if m := parse_text(after):
         if not inv or m != (inv.lang, inv.code):
             await Invokation(session, after, *m).execute()
     elif inv:
