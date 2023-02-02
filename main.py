@@ -147,7 +147,9 @@ class Options(discord.ui.Modal, title="Edit options"):
 
 @bot.tree.context_menu(name="Edit options")
 async def edit_options(interaction, message: discord.Message):
-    if inv := Invokation.results.get(message.id):
+    if message.author.id != interaction.user.id:
+        await interaction.response.send_message("This isn't your message.", ephemeral=True)
+    elif inv := Invokation.results.get(message.id):
         await interaction.response.send_modal(Options(inv))
     else:
         await interaction.response.send_message("There's no code in this message.", ephemeral=True)
