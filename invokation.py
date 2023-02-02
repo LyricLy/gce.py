@@ -165,12 +165,12 @@ class Invokation:
 
     @staticmethod
     async def jostle_stdout(message_id, value):
-        if inv := Invokation.results.get(message_id):
+        if (inv := Invokation.results.get(message_id)) and user_id == inv.message.author.id:
             inv.send_stdout = value
             await inv.send_output()
 
     @staticmethod
-    async def jostle_stderr(message_id, value):
-        if inv := Invokation.results.get(message_id):
+    async def jostle_stderr(message_id, user_id, value):
+        if (inv := Invokation.results.get(message_id)) and user_id == inv.message.author.id:
             inv.send_stderr = value
             await inv.send_output()
