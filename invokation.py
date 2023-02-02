@@ -166,25 +166,11 @@ class Invokation:
     @staticmethod
     async def jostle_stdout(message_id, value):
         if inv := Invokation.results.get(message_id):
-            if not value:
-                inv.send_stdout -= 1
-                if not inv.send_stdout:
-                    await inv.send_output()
-            else:
-                send = not inv.send_stdout
-                inv.send_stdout += 1
-                if send:
-                    await inv.send_output()
+            inv.send_stdout = value
+            await inv.send_output()
 
     @staticmethod
     async def jostle_stderr(message_id, value):
         if inv := Invokation.results.get(message_id):
-            if not value:
-                inv.send_stderr -= 1
-                if not inv.send_stderr:
-                    await inv.send_output()
-            else:
-                send = not inv.send_stderr
-                inv.send_stderr += 1
-                if send:
-                    await inv.send_output()
+            inv.send_stderr = value
+            await inv.send_output()
