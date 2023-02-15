@@ -6,7 +6,6 @@ from typing import Optional
 
 import discord
 from discord.ext import commands
-from thefuzz import process
 
 import sources
 from invokation import Invokation, STDOUT, STDERR
@@ -200,16 +199,12 @@ class ListView(discord.ui.View):
     async def on_timeout(self):
         await self.message.delete()
 
-def match_lang(term, score, limit):
-    return [x[0] for x in process.extractBests(term, [l.id for l in sources.languages.values()], processor=lambda s: s.rsplit("-", 1)[0], score_cutoff=score, limit=limit)]
-
 @bot.command()
-async def langs(ctx, *, search=None):
+async def langs(ctx, *, search):
     """Find usable languages."""
+    langs = [l.id for l in sources.languages.values()]
     if search:
-        langs = match_lang(search, 88, 20)
-    else:
-        langs = [l.id for l in sources.languages.values()]
+        langs = [x for x in langs if search in x]
 
     if langs:
         view = ListView(langs)
