@@ -25,4 +25,4 @@ ALIASES = {
 def is_snippet(lang, code):
     return (lang.split("-")[0] in ("rust", "c", "cpp", "cs", "haskell", "java") and b"main" not in code
          or lang == "brainfuck" and b"." not in code
-         or lang.startswith("python") and all([not line or line.startswith((b"def", b"class", b"#", b'"', b"'", b" ", b"\t")) for line in code.splitlines()]))
+         or lang.startswith("python") and all([not line or line.startswith((b"def ", b"class ", b"#", b'"', b"'", b" ", b"\t")) for line in code.splitlines()]))
