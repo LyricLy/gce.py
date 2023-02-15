@@ -49,6 +49,7 @@ ALIASES = {
     "vb": "vb-core",
     "x86asm": "assembly-fasm",
     "k": "k-ngn",
+    "apl": "apl-dyalog",
     "cr": "crystal",
 }
 
