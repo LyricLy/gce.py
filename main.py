@@ -200,7 +200,7 @@ class ListView(discord.ui.View):
         await self.message.delete()
 
 @bot.command()
-async def langs(ctx, *, search):
+async def langs(ctx, *, search=None):
     """Find usable languages."""
     langs = [l.id for l in sources.languages.values()]
     if search:
