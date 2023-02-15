@@ -9,6 +9,7 @@ from discord.ext import commands
 
 import sources
 from invokation import Invokation, STDOUT, STDERR
+from langdata import ALIASES, is_snippet
 
 
 bot = commands.Bot(
@@ -28,31 +29,7 @@ bot = commands.Bot(
 async def on_ready():
     print(f"Ready on {bot.user}")
 
-
 CODEBLOCK = re.compile(rf"^> [^\n]*|^>>> .*|(?<!\\)(?:\\\\)*```(?:([a-zA-Z_\-+.0-9]*)\n)?(.+?)```", re.DOTALL | re.MULTILINE)
-
-ALIASES = {
-    "bf": "brainfuck",
-    "rb": "ruby",
-    "rs": "rust",
-    "py": "python3",
-    "python": "python3",
-    "java": "java-jdk",
-    "c": "c-gcc",
-    "cpp": "cpp-gcc",
-    "c++": "cpp-gcc",
-    "js": "javascript-node",
-    "javascript": "javascript-node",
-    "hs": "haskell",
-    "pl": "perl5",
-    "perl": "perl5",
-    "vb": "vb-core",
-    "x86asm": "assembly-fasm",
-    "k": "k-ngn",
-    "apl": "apl-dyalog",
-    "cr": "crystal",
-}
-
 
 def parse_text(msg):
     text = msg.content
@@ -63,9 +40,12 @@ def parse_text(msg):
         if not lang:
             continue
         lang = ALIASES.get(lang, lang)
-        code = m.group(2)
+        code = m.group(2).encode()
+        if is_snippet(lang, code):
+            print("DANG")
+            continue
         if l := sources.languages.get(lang):
-            return l, code.encode()
+            return l, code
     return None
 
 @bot.event
@@ -96,14 +76,14 @@ async def on_message_delete(message):
 @bot.event
 async def on_raw_reaction_add(payload):
     if str(payload.emoji) == STDOUT:
-        await Invokation.jostle_stdout(payload.message_id, payload.user_id, True)
+        await Invokation.jostle_stdout(payload.message_id, True)
     elif str(payload.emoji) == STDERR:
         await Invokation.jostle_stderr(payload.message_id, payload.user_id, True)
 
 @bot.event
 async def on_raw_reaction_remove(payload):
     if str(payload.emoji)[1:] == STDOUT[2:]:
-        await Invokation.jostle_stdout(payload.message_id, payload.user_id, False)
+        await Invokation.jostle_stdout(payload.message_id, False)
     elif str(payload.emoji)[1:] == STDERR[2:]:
         await Invokation.jostle_stderr(payload.message_id, payload.user_id, False)
 
