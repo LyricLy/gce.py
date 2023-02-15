@@ -37,7 +37,7 @@ RENAMES = {
     "cplusplus_gcc": "cpp-gcc",
     "objective_cplusplus_gcc": "objective-c-gcc",
     "clang": "c-clang",
-    "dyalog-apl": "apl-dyalog",
+    "dyalog_apl": "apl-dyalog",
 }
 
 actual_names = {}
