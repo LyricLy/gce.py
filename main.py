@@ -42,7 +42,6 @@ def parse_text(msg):
         lang = ALIASES.get(lang, lang)
         code = m.group(2).encode()
         if is_snippet(lang, code):
-            print("DANG")
             continue
         if l := sources.languages.get(lang):
             return l, code
@@ -175,6 +174,9 @@ class ListView(discord.ui.View):
             if not field:
                 continue
             e.add_field(name="\u200b", value="\n".join(field), inline=True)
+        if len(e.fields) == 1:
+            e.description = e.fields[0].value
+            e.clear_fields()
         return e
 
     async def on_timeout(self):
