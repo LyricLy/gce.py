@@ -38,6 +38,7 @@ RENAMES = {
     "objective_cplusplus_gcc": "objective-c-gcc",
     "clang": "c-clang",
     "dyalog_apl": "apl-dyalog",
+    "node": "javascript-node",
 }
 
 actual_names = {}
