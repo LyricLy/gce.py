@@ -8,7 +8,7 @@ import discord
 from discord.ext import commands
 
 import sources
-from invokation import Invokation, STDOUT, STDERR
+from invokation import Invokation
 from langdata import ALIASES, is_snippet
 
 
@@ -74,17 +74,11 @@ async def on_message_delete(message):
 
 @bot.event
 async def on_raw_reaction_add(payload):
-    if str(payload.emoji) == STDOUT:
-        await Invokation.jostle_stdout(payload.message_id, True)
-    elif str(payload.emoji) == STDERR:
-        await Invokation.jostle_stderr(payload.message_id, payload.user_id, True)
+    await Invokation.jostle(str(payload.emoji), payload.message_id, payload.user_id, True)
 
 @bot.event
 async def on_raw_reaction_remove(payload):
-    if str(payload.emoji)[1:] == STDOUT[2:]:
-        await Invokation.jostle_stdout(payload.message_id, False)
-    elif str(payload.emoji)[1:] == STDERR[2:]:
-        await Invokation.jostle_stderr(payload.message_id, payload.user_id, False)
+    await Invokation.jostle(str(payload.emoji), payload.message_id, payload.user_id, False)
 
 
 class Options(discord.ui.Modal, title="Edit options"):

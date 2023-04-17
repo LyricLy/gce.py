@@ -28,6 +28,9 @@ def render(b, name, *, file=False, codeblock=False):
         out = f"```\n\u200b{out}```"
     return name, out
 
+def attr(e):
+    return "show_stdout" if e == STDOUT or e[1:] == STDOUT[2:] else "show_stderr" if e == STDERR or e[1:] == STDERR[2:] else None
+
 
 class Invokation:
     results = {}
@@ -164,13 +167,7 @@ class Invokation:
             await inv.output_message.delete()
 
     @staticmethod
-    async def jostle_stdout(message_id, value):
-        if (inv := Invokation.results.get(message_id)) and user_id == inv.message.author.id:
-            inv.send_stdout = value
-            await inv.send_output()
-
-    @staticmethod
-    async def jostle_stderr(message_id, user_id, value):
-        if (inv := Invokation.results.get(message_id)) and user_id == inv.message.author.id:
-            inv.send_stderr = value
+    async def jostle(emoji, message_id, user_id, value):
+        if (a := attr(emoji)) and (inv := Invokation.results.get(message_id)) and user_id == inv.message.author.id:
+            setattr(inv, a, value)
             await inv.send_output()
