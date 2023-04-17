@@ -29,7 +29,7 @@ def render(b, name, *, file=False, codeblock=False):
     return name, out
 
 def attr(e):
-    return "show_stdout" if e == STDOUT or e[1:] == STDOUT[2:] else "show_stderr" if e == STDERR or e[1:] == STDERR[2:] else None
+    return "send_stdout" if e == STDOUT or e[1:] == STDOUT[2:] else "send_stderr" if e == STDERR or e[1:] == STDERR[2:] else None
 
 
 class Invokation:
@@ -168,6 +168,7 @@ class Invokation:
 
     @staticmethod
     async def jostle(emoji, message_id, user_id, value):
-        if (a := attr(emoji)) and (inv := Invokation.results.get(message_id)) and user_id == inv.message.author.id:
+        if (inv := Invokation.results.get(message_id)) and user_id == inv.message.author.id and (a := attr(emoji)):
+            print(a, value)
             setattr(inv, a, value)
             await inv.send_output()
