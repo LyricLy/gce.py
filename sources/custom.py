@@ -30,12 +30,19 @@ async def execute(inv):
         stdout, stderr = await asyncio.wait_for(sh.communicate(inv.stdin.encode()), timeout=TIMEOUT)
         inv.stdout = stdout
         inv.stderr = stderr
-        inv.success = sh.returncode == 0
     except asyncio.TimeoutError:
         # if we try to read the data, we're likely just to deadlock
-        inv.success = None
-    finally:
-        os.remove(filename)
+        pass
+    os.remove(filename)
+    match sh.returncode:
+        case 0:
+            inv.success = SUCCESS
+        case -15:
+            inv.success = OOM
+        case None:
+            inv.success = TIMEOUT
+        case _:
+            inv.success = FAILED
 
 async def populate_languages(_, langs):
     for name, (display, _) in languages.items():

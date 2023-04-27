@@ -28,7 +28,14 @@ async def execute(inv):
                 inv.stderr += data["Stderr"]
             if "Done" in data:
                 d = data["Done"]
-                inv.success = d["status_type"] == "exited" and d["status_value"] == 0 if not d["timed_out"] else None
+                if d["timed_out"]:
+                    inv.success = TIMEOUT
+                elif d["status_type"] == "exited" and d["status_value"] == 137:
+                    inv.success = OOM
+                elif d["status_type"] == "exited" and d["status_value"] == 0:
+                    inv.success = SUCCESS
+                else:
+                    inv.success = FAILED
                 break
 
 

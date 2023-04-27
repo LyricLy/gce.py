@@ -49,7 +49,14 @@ async def execute(inv):
     output, debug, info = d
     inv.stdout = output
     *_, debug, spare = [b""] + debug.rsplit(b"\n\n", 1)
-    inv.success = spare.endswith(b" 0") if info != b"The request exceeded the 60 second time limit and was terminated." else None
+    if info == b"The request exceeded the 60 second time limit and was terminated.\n":
+        inv.success = TIMEOUT
+    elif spare.endswith(b" 137"):
+        inv.success = OOM
+    elif spare.endswith(b" 0"):
+        inv.success = SUCCESS
+    else:
+        inv.success = FAILED
     inv.stderr = debug
 
 

@@ -11,6 +11,7 @@ import sources
 SUCCESS = "<a:success:1063592453434773635>"
 FAILED = "<a:failed:1063589487420117052>"
 TIMED_OUT = "<a:timed_out:1063619304945360907>"
+OOM = "<a:oom:1101042334818385960>"
 STDOUT = "<a:stdout:1063612629765079171>"
 STDERR = "<a:stderr:1063598758153158756>"
 RUNNING = "<a:running:1063577055796658277>"
@@ -139,10 +140,12 @@ class Invokation:
             if sent_running or self.is_reboot:
                 await self.message.clear_reactions()
 
-            if self.success:
+            if self.success == sources.SUCCESS:
                 await self.message.add_reaction(SUCCESS)
-            elif self.success is None:
+            elif self.success == sources.TIMEOUT:
                 await self.message.add_reaction(TIMED_OUT)
+            elif self.success == sources.OOM:
+                await self.message.add_reaction(OOM)
             else:
                 await self.message.add_reaction(FAILED)
 
@@ -169,6 +172,5 @@ class Invokation:
     @staticmethod
     async def jostle(emoji, message_id, user_id, value):
         if (inv := Invokation.results.get(message_id)) and user_id == inv.message.author.id and (a := attr(emoji)):
-            print(a, value)
             setattr(inv, a, value)
             await inv.send_output()
