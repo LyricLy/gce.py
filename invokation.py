@@ -48,7 +48,7 @@ class Invokation:
         self.stdout = b""
         self.stderr = b""
         self.is_reboot = False
-        self.success = False
+        self.success = sources.FAILED
 
         if old := Invokation.results.get(message.id):
             old.task.cancel()
@@ -133,7 +133,7 @@ class Invokation:
 
         is_stdout = bool(self.stdout)
         is_stderr = bool(self.stderr)
-        self.send_stdout = bool(self.success) and is_stdout
+        self.send_stdout = self.success == sources.SUCCESS and is_stdout
         self.send_stderr = False
 
         async def send_reactions():
@@ -149,7 +149,7 @@ class Invokation:
             else:
                 await self.message.add_reaction(FAILED)
 
-            if not self.success and is_stdout:
+            if self.success != sources.SUCCESS and is_stdout:
                 await self.message.add_reaction(STDOUT)
             if is_stderr:
                 await self.message.add_reaction(STDERR)
