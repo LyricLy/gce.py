@@ -21,7 +21,7 @@ with open("languages") as f:
         languages[name] = display, cmd
 
 async def execute(inv):
-    filename = f".code_{random.randint(1, 368307)}.{inv.lang.id}"
+    filename = f"code_{random.randint(1, 368307)}.{inv.lang.id}"
     with open(filename, "wb") as f:
         f.write(inv.code)
     s = languages[inv.lang.id][1].format(code=filename, options=shlex.join(inv.options), args=shlex.join(inv.args), input=shlex.quote(inv.stdin))
