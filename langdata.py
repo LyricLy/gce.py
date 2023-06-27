@@ -20,6 +20,7 @@ ALIASES = {
     "k": "k-ngn",
     "apl": "apl-dyalog",
     "cr": "crystal",
+    "clj": "clojure",
 }
 
 def is_snippet(lang, code):
