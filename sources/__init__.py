@@ -4,7 +4,7 @@ from . import tio, custom, ato
 from .common import SUCCESS, FAILED, TIMEOUT, OOM
 
 
-SOURCES = (tio, ato, custom)
+SOURCES = (tio, custom)
 
 languages = {}
 
