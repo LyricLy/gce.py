@@ -4,7 +4,7 @@ A Discord bot for executing code using a variety of sources.
 
 ## Hosting
 
-To host, just make a file called `token.txt` and place the bot token in it. As the bot host, you gain access to Jishaku through `gce!jsk`.
+To host, just make a file called `token.txt`, place the bot token in it, and run `main.py`. As the bot host, you gain access to Jishaku through `gce!jsk`.
 
 ## Invite
 
