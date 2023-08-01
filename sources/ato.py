@@ -1,3 +1,4 @@
+import asyncio
 import aiohttp
 import msgpack
 
@@ -14,13 +15,14 @@ async def execute(inv):
             "arguments": [x.encode() for x in inv.args],
             "timeout": 60,
         }))
+
         while True:
-            resp = await ws.receive(timeout=65)
+            try:
+                resp = await ws.receive(timeout=65)
+            except asyncio.TimeoutError:
+                break
             if resp.type == aiohttp.WSMsgType.CLOSE:
-                inv.stdout = ""
-                inv.stderr = ""
-                inv.success = False
-                return
+                break
             data = msgpack.unpackb(resp.data)
             if "Stdout" in data:
                 inv.stdout += data["Stdout"]
@@ -36,7 +38,11 @@ async def execute(inv):
                     inv.success = SUCCESS
                 else:
                     inv.success = FAILED
-                break
+                return
+
+        inv.stdout = ""
+        inv.stderr = ""
+        inv.success = FAILED
 
 
 RENAMES = {
