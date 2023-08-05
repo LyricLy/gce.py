@@ -8,7 +8,7 @@ from .common import *
 async def execute(inv):
     async with inv.session.ws_connect("https://ato.pxeger.com/api/v1/ws/execute") as ws:
         await ws.send_bytes(msgpack.packb({
-            "language": actual_names[inv.lang.id],
+            "language": inv.lang.id,
             "code": inv.code,
             "input": inv.stdin.encode(),
             "options": [x.encode() for x in inv.options],
@@ -54,15 +54,12 @@ RENAMES = {
     "node": "javascript-node",
 }
 
-actual_names = {}
-
 async def populate_languages(session, languages):
     async with session.get("https://ato.pxeger.com/languages.json") as resp:
         data = await resp.json()
         for key, value in data.items():
             # prefer names and conventions from TIO
             better = RENAMES.get(key, key).replace("_", "-").lower()
-            actual_names[better] = key
             name = languages[better].name if better in languages else value["name"]
 
-            languages[better] = Language(better, name, execute, "with ATO")
+            languages[better] = Language(key, name, execute, "with ATO")
