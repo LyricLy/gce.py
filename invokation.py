@@ -59,8 +59,8 @@ class Invokation:
             self.args = old.args
             self.is_reboot = True
 
-    async def send_public_message(self, content=None, embed=None, files=None):
-        if not (content or embed or files):
+    async def send_public_message(self, content="", embed=None, files=None):
+        if not (content.strip() or embed or files):
             if self.output_message:
                 await self.output_message.delete()
                 self.output_message = None
