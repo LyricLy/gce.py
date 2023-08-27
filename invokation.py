@@ -1,7 +1,6 @@
 import asyncio
 import datetime
 import discord
-import textwrap
 import shlex
 import io
 
@@ -22,7 +21,7 @@ def render(b, name, *, file=False, codeblock=False):
         out = b.decode()
     except UnicodeDecodeError:
         out = None
-    if file or out is None or textwrap.fill(out, 80, tabsize=4, replace_whitespace=False).count("\n") > 10:
+    if file or out is None or sum(1 + len(x) // 90 for x in out.splitlines()) > 11:
         return discord.File(io.BytesIO(b), f"{name}.txt")
     if codeblock:
         out = out.replace('```', '`\u200b``')
