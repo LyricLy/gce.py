@@ -6,6 +6,7 @@ from typing import Optional
 
 import discord
 from discord.ext import commands
+from parse_discord import parse, Codeblock
 
 import sources
 from invokation import Invokation
@@ -29,18 +30,17 @@ bot = commands.Bot(
 async def on_ready():
     print(f"Ready on {bot.user}")
 
-CODEBLOCK = re.compile(rf"^(?:[>*#-]|\d+.) [^\n]*|^>>> .*|(?<!\\)(?:\\\\)*```(?:([a-zA-Z_\-+.0-9]*)\n)?(.+?)```", re.DOTALL | re.MULTILINE)
-
 def parse_text(msg):
     text = msg.content
     if msg.author.id in (261243340752814085, 179957318941671424) and "gce" not in text.lower():
         return None
-    for m in CODEBLOCK.finditer(text):
-        lang = m.group(1)
-        if not lang:
+    for m in parse(text).walk():
+        if not isinstance(m, Codeblock):
             continue
-        lang = ALIASES.get(lang, lang)
-        code = m.group(2).encode()
+        if not m.language:
+            continue
+        lang = ALIASES.get(m.language, m.language)
+        code = m.content.encode()
         if is_snippet(lang, code):
             continue
         if l := sources.languages.get(lang):
