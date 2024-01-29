@@ -40,7 +40,7 @@ def parse_text(msg):
         if not m.language:
             continue
         lang = ALIASES.get(m.language, m.language)
-        code = m.content.encode()
+        code = m.content.encode() + b"\n"
         if is_snippet(lang, code):
             continue
         if l := sources.languages.get(lang):
