@@ -32,7 +32,7 @@ async def execute(inv):
         inv.stderr = stderr
     except asyncio.TimeoutError:
         # if we try to read the data, we're likely just to deadlock
-        pass
+        sh.kill()
     os.remove(filename)
     match sh.returncode:
         case 0:
