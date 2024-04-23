@@ -1,29 +1,27 @@
 import asyncio
 import aiohttp
 import msgpack
+import logging
 
 from .common import *
 
 
 async def execute(inv):
-    async with inv.session.ws_connect("https://ato.pxeger.com/api/v1/ws/execute") as ws:
-        await ws.send_bytes(msgpack.packb({
+    async with inv.session.ws_connect("https://ato.pxeger.com/api/v1/ws/execute", receive_timeout=65) as ws:
+        msg = {
             "language": inv.lang.id,
             "code": inv.code,
             "input": inv.stdin.encode(),
             "options": [x.encode() for x in inv.options],
             "arguments": [x.encode() for x in inv.args],
             "timeout": 60,
-        }))
+        }
+        logging.info(f"sending: {msg}")
+        await ws.send_bytes(msgpack.packb(msg))
 
-        while True:
-            try:
-                resp = await ws.receive(timeout=65)
-            except asyncio.TimeoutError:
-                break
-            if resp.type == aiohttp.WSMsgType.CLOSE:
-                break
+        async for resp in ws:
             data = msgpack.unpackb(resp.data)
+            logging.info(f"received: {data}")
             if "Stdout" in data:
                 inv.stdout += data["Stdout"]
             if "Stderr" in data:

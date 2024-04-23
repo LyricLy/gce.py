@@ -199,4 +199,4 @@ async def setup():
 bot.setup_hook = setup
 
 with open("token.txt") as f:
-    bot.run(f.read().strip())
+    bot.run(f.read().strip(), root_logger=True)
