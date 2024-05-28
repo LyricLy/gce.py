@@ -1,7 +1,6 @@
 import asyncio
 import aiohttp
 import msgpack
-import logging
 
 from .common import *
 
@@ -16,12 +15,10 @@ async def execute(inv):
             "arguments": [x.encode() for x in inv.args],
             "timeout": 60,
         }
-        logging.info(f"sending: {msg}")
         await ws.send_bytes(msgpack.packb(msg))
 
         async for resp in ws:
             data = msgpack.unpackb(resp.data)
-            logging.info(f"received: {data}")
             if "Stdout" in data:
                 inv.stdout += data["Stdout"]
             if "Stderr" in data:

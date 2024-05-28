@@ -153,9 +153,9 @@ class Invokation:
             if is_stderr:
                 await self.message.add_reaction(STDERR)
 
-        loop.create_task(send_reactions())
-
+        t = loop.create_task(send_reactions())
         await self.send_output()
+        await t
 
     async def execute(self):
         Invokation.results[self.message.id] = self
