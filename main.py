@@ -9,7 +9,8 @@ from discord.ext import commands
 from parse_discord import parse, Codeblock
 
 import sources
-from invokation import Invokation
+from outputter import StandardOutputter, InteractionOutputter
+from invokation import Invokation, attr
 from langdata import ALIASES, is_snippet
 
 
@@ -24,6 +25,7 @@ bot = commands.Bot(
     ),
     allowed_mentions=discord.AllowedMentions.none(),
 )
+results = {}
 
 
 @bot.event
@@ -47,43 +49,61 @@ def parse_text(msg):
             return l, code
     return None
 
+async def execute(inv):
+    results[inv.message.id] = inv
+    await inv.execute()
+
 @bot.event
 async def on_message(message):
     await bot.process_commands(message)
     if message.author.bot or not message.guild:
         return
     if m := parse_text(message):
-        await Invokation(session, message, *m).execute()
+        await execute(Invokation(session, message, *m, outputter=StandardOutputter(message)))
+
+async def delete(message):
+    if inv := results.get(message.id):
+        del results[message.id]
+        await inv.outputter.delete()
 
 @bot.event
 async def on_message_edit(before, after):
     if after.author.bot or not after.guild:
         return
-    inv = Invokation.results.get(after.id)
+    inv = results.get(after.id)
     if m := parse_text(after):
         if not inv or m != (inv.lang, inv.code):
-            await Invokation(session, after, *m).execute()
+            if inv:
+                inv.task.cancel()
+                inv = Invokation(session, after, *m, stdin=inv.stdin, args=inv.args, options=inv.options, outputter=inv.outputter)
+            else:
+                inv = Invokation(session, after, *m, outputter=StandardOutputter(after))
+            await execute(inv)
     elif inv:
         await after.clear_reactions()
-        await Invokation.delete(after)
-    
+        await delete(after)
 
 @bot.event
 async def on_message_delete(message):
-    await Invokation.delete(message)
+    await delete(message)
+
+async def jostle(emoji, message_id, user_id, value):
+    if (inv := results.get(message_id)) and user_id == inv.message.author.id and (a := attr(emoji)):
+        setattr(inv, a, value)
+        await inv.send_output()
 
 @bot.event
 async def on_raw_reaction_add(payload):
-    await Invokation.jostle(str(payload.emoji), payload.message_id, payload.user_id, True)
+    await jostle(str(payload.emoji), payload.message_id, payload.user_id, True)
 
 @bot.event
 async def on_raw_reaction_remove(payload):
-    await Invokation.jostle(str(payload.emoji), payload.message_id, payload.user_id, False)
+    await jostle(str(payload.emoji), payload.message_id, payload.user_id, False)
 
 
 class Options(discord.ui.Modal, title="Edit options"):
     options = discord.ui.TextInput(label="Options", required=False, placeholder="Options to the interpreter or compiler.")
-    stdin = discord.ui.TextInput(label="Input", required=False, placeholder="Standard input.")
+    stdin = discord.ui.TextInput(label="Input", style=discord.TextStyle.paragraph, required=False, placeholder="Standard input.")
     args = discord.ui.TextInput(label="Arguments", required=False, placeholder="Arguments to the program.")
 
     def __init__(self, inv):
@@ -106,24 +126,39 @@ class Options(discord.ui.Modal, title="Edit options"):
         if not (self.stdin.value != self.inv.stdin or options != self.inv.options or args != self.inv.args):
             return
 
-        inv = Invokation(session, self.inv.message, self.inv.lang, self.inv.code)
-        inv.stdin = self.stdin.value
-        inv.options = options
-        inv.args = args
-        await inv.execute()
+        await execute(Invokation(
+            session,
+            self.inv.message,
+            self.inv.lang,
+            self.inv.code,
+            stdin=self.stdin.value,
+            options=options,
+            args=args,
+            outputter=self.inv.outputter,
+        ))
+
+@discord.app_commands.user_install()
+@bot.tree.context_menu()
+async def invoke(interaction, message: discord.Message):
+    ephemeral = message.author.id != interaction.user.id
+    if m := parse_text(message):
+        await interaction.response.defer(ephemeral=ephemeral)
+        await Invokation(session, message, *m, outputter=InteractionOutputter(interaction)).execute()
+    else:
+        await interaction.response.send_message("There's no code in this message.", ephemeral=True)
 
 @bot.tree.context_menu(name="Edit options")
 async def edit_options(interaction, message: discord.Message):
     if message.author.id != interaction.user.id:
         await interaction.response.send_message("This isn't your message.", ephemeral=True)
-    elif inv := Invokation.results.get(message.id):
+    elif inv := results.get(message.id):
         await interaction.response.send_modal(Options(inv))
     else:
         await interaction.response.send_message("There's no code in this message.", ephemeral=True)
 
 @bot.tree.context_menu()
 async def info(interaction, message: discord.Message):
-    if inv := Invokation.results.get(message.id):
+    if inv := results.get(message.id):
         await interaction.response.send_message(f"Executed {inv.lang.runner} as {inv.lang.name}.", ephemeral=True)
     else:
         await interaction.response.send_message("There's no code in this message.", ephemeral=True)

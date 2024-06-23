@@ -33,42 +33,28 @@ def attr(e):
 
 
 class Invokation:
-    results = {}
-
-    def __init__(self, session, message, lang, code, stdin="", options=[], args=[]):
+    def __init__(self, session, message, lang, code, *, outputter, stdin="", options=(), args=()):
         self.session = session
         self.lang = lang
         self.message = message
-        self.output_message = None
+        self.outputter = outputter
         self.code = code
         self.stdin = stdin
         self.options = options
         self.args = args
         self.stdout = b""
         self.stderr = b""
-        self.is_reboot = False
         self.success = sources.FAILED
-
-        if old := Invokation.results.get(message.id):
-            old.task.cancel()
-            # re-use some things
-            self.output_message = old.output_message
-            self.stdin = old.stdin
-            self.options = old.options
-            self.args = old.args
-            self.is_reboot = True
 
     async def send_public_message(self, content="", embed=None, files=None):
         if not (content.strip() or embed or files):
-            if self.output_message:
-                await self.output_message.delete()
-                self.output_message = None
+            await self.outputter.delete()
             return
 
-        if self.output_message:
-            return await self.output_message.edit(content=content, embed=embed, attachments=files)
+        if self.outputter.can_edit():
+            return await self.outputter.edit(content=content, embed=embed, attachments=files)
 
-        self.output_message = await self.message.channel.send(content, embed=embed, files=files, reference=self.message if self.message.channel.last_message_id != self.message.id else None, mention_author=False)
+        await self.outputter.send(content, embed=embed, files=files, reference=self.message if self.message.channel.last_message_id != self.message.id else None, mention_author=False)
 
     async def send_output(self):
         texts = []
@@ -111,65 +97,54 @@ class Invokation:
     async def _execute(self):
         loop = asyncio.get_event_loop()
         me = self.message.guild.me
+        can_react = hasattr(self.outputter, "add_reaction")
 
         async def running():
-            nonlocal sent_running
             # wait a bit for quick programs to finish right away without wasting time reacting
             await asyncio.sleep(2)
 
-            if self.is_reboot:
-                await self.message.clear_reactions()
-            sent_running = True
-            await self.message.add_reaction(RUNNING)
+            await self.outputter.clear_reactions()
+            await self.outputter.add_reaction(RUNNING)
 
-            if self.output_message:
-                await self.output_message.edit(content="Message edited. Recalculating...", embed=None, attachments=[])
+            if self.outputter.can_edit():
+                await self.outputter.edit(content="Message edited. Recalculating...", embed=None, attachments=[])
 
-        sent_running = False
-        send_running = loop.create_task(running())
+        send_running = loop.create_task(running() if can_react else asyncio.sleep(0))
         await self.lang.execute(self)
         send_running.cancel()
 
         is_stdout = bool(self.stdout)
         is_stderr = bool(self.stderr)
-        self.send_stdout = self.success == sources.SUCCESS and is_stdout
-        self.send_stderr = False
 
-        async def send_reactions():
-            if sent_running or self.is_reboot:
-                await self.message.clear_reactions()
+        if can_react:
+            self.send_stdout = self.success == sources.SUCCESS and is_stdout
+            self.send_stderr = False
 
-            if self.success == sources.SUCCESS:
-                await self.message.add_reaction(SUCCESS)
-            elif self.success == sources.TIMEOUT:
-                await self.message.add_reaction(TIMED_OUT)
-            elif self.success == sources.OOM:
-                await self.message.add_reaction(OOM)
-            else:
-                await self.message.add_reaction(FAILED)
+            async def send_reactions():
+                await self.outputter.clear_reactions()
 
-            if self.success != sources.SUCCESS and is_stdout:
-                await self.message.add_reaction(STDOUT)
-            if is_stderr:
-                await self.message.add_reaction(STDERR)
+                if self.success == sources.SUCCESS:
+                    await self.outputter.add_reaction(SUCCESS)
+                elif self.success == sources.TIMEOUT:
+                    await self.outputter.add_reaction(TIMED_OUT)
+                elif self.success == sources.OOM:
+                    await self.outputter.add_reaction(OOM)
+                else:
+                    await self.outputter.add_reaction(FAILED)
 
-        t = loop.create_task(send_reactions())
-        await self.send_output()
-        await t
+                if self.success != sources.SUCCESS and is_stdout:
+                    await self.outputter.add_reaction(STDOUT)
+                if is_stderr:
+                    await self.outputter.add_reaction(STDERR)
+
+            t = loop.create_task(send_reactions())
+            await self.send_output()
+            await t
+        else:
+            self.send_stdout = is_stdout
+            self.send_stderr = is_stderr
+            await self.send_output()
 
     async def execute(self):
-        Invokation.results[self.message.id] = self
         self.task = task = asyncio.get_event_loop().create_task(self._execute())
         await task
-
-    @staticmethod
-    async def delete(message):
-        if (inv := Invokation.results.get(message.id)) and inv.output_message:
-            del Invokation.results[message.id]
-            await inv.output_message.delete()
-
-    @staticmethod
-    async def jostle(emoji, message_id, user_id, value):
-        if (inv := Invokation.results.get(message_id)) and user_id == inv.message.author.id and (a := attr(emoji)):
-            setattr(inv, a, value)
-            await inv.send_output()
