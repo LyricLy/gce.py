@@ -21,10 +21,11 @@ class StandardOutputter:
     async def clear_reactions(self):
         if self.are_reactions:
             await self.message.clear_reactions()
+            self.are_reactions = False
 
     async def add_reaction(self, reaction):
-        await self.message.add_reaction(reaction)
         self.are_reactions = True
+        await self.message.add_reaction(reaction)
 
 
 class InteractionOutputter:
