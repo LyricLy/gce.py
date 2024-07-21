@@ -11,7 +11,7 @@ from parse_discord import parse, Codeblock
 import sources
 from outputter import StandardOutputter, InteractionOutputter
 from invokation import Invokation, attr
-from langdata import ALIASES, is_snippet
+from langdata import ALIASES
 
 
 bot = commands.Bot(
@@ -43,8 +43,6 @@ def parse_text(msg):
             continue
         lang = ALIASES.get(m.language, m.language)
         code = m.content.encode() + b"\n"
-        if is_snippet(lang, code):
-            continue
         if l := sources.languages.get(lang):
             return l, code
     return None
