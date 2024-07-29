@@ -24,6 +24,7 @@ bot = commands.Bot(
         reactions=True,
     ),
     allowed_mentions=discord.AllowedMentions.none(),
+    max_messages=None,
 )
 results = {}
 
