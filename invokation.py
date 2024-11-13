@@ -137,9 +137,9 @@ class Invokation:
                 if is_stderr:
                     await self.outputter.add_reaction(STDERR)
 
-            t = loop.create_task(send_reactions())
-            await self.send_output()
-            await t
+            async with asyncio.TaskGroup() as tg:
+                tg.create_task(send_reactions())
+                tg.create_task(self.send_output())
         else:
             self.send_stdout = is_stdout
             self.send_stderr = is_stderr
