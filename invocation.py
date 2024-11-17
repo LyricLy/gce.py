@@ -32,7 +32,7 @@ def attr(e):
     return "send_stdout" if e == STDOUT or e[1:] == STDOUT[2:] else "send_stderr" if e == STDERR or e[1:] == STDERR[2:] else None
 
 
-class Invokation:
+class Invocation:
     def __init__(self, session, message, lang, code, *, outputter, stdin="", options=(), args=()):
         self.session = session
         self.lang = lang

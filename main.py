@@ -10,7 +10,7 @@ from parse_discord import parse, Codeblock
 
 import sources
 from outputter import StandardOutputter, InteractionOutputter
-from invokation import Invokation, attr
+from invocation import Invocation, attr
 from langdata import ALIASES
 
 
@@ -57,7 +57,7 @@ async def on_message(message):
     if message.author.bot or not message.guild:
         return
     if m := parse_text(message):
-        await execute(Invokation(session, message, *m, outputter=StandardOutputter(message)))
+        await execute(Invocation(session, message, *m, outputter=StandardOutputter(message)))
 
 async def delete(message):
     if inv := results.get(message.id):
@@ -73,9 +73,9 @@ async def on_message_edit(before, after):
         if not inv or m != (inv.lang, inv.code):
             if inv:
                 inv.task.cancel()
-                inv = Invokation(session, after, *m, stdin=inv.stdin, args=inv.args, options=inv.options, outputter=inv.outputter)
+                inv = Invocation(session, after, *m, stdin=inv.stdin, args=inv.args, options=inv.options, outputter=inv.outputter)
             else:
-                inv = Invokation(session, after, *m, outputter=StandardOutputter(after))
+                inv = Invocation(session, after, *m, outputter=StandardOutputter(after))
             await execute(inv)
     elif inv:
         await after.clear_reactions()
@@ -124,7 +124,7 @@ class Options(discord.ui.Modal, title="Edit options"):
         if not (self.stdin.value != self.inv.stdin or options != self.inv.options or args != self.inv.args):
             return
 
-        await execute(Invokation(
+        await execute(Invocation(
             session,
             self.inv.message,
             self.inv.lang,
@@ -141,7 +141,7 @@ async def invoke(interaction, message: discord.Message):
     ephemeral = message.author.id != interaction.user.id
     if m := parse_text(message):
         await interaction.response.defer(ephemeral=ephemeral)
-        await Invokation(session, message, *m, outputter=InteractionOutputter(interaction)).execute()
+        await Invocation(session, message, *m, outputter=InteractionOutputter(interaction)).execute()
     else:
         await interaction.response.send_message("There's no code in this message.", ephemeral=True)
 
